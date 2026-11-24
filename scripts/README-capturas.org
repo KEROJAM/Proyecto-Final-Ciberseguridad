@@ -51,3 +51,25 @@ válida.
 
 Por tanto, la automatización debe usar las opciones anteriores; la selección
 con =slurp= queda reservada a una persona.
+
+* Capturas del proyecto (pantalla completa)
+
+Para regenerar las 14 imágenes del informe y de la presentación sin escritorio
+de fondo se usa:
+
+#+begin_src sh
+LAB_PASSWORD='...' scripts/capturar_figuras.sh
+#+end_src
+
+El flujo es:
+
+1. =scripts/ver_app.py= abre cada URL en una ventana Qt que pide fullscreen
+   (=LAB_FULLSCREEN=1=) y escribe =LAB_READY_FILE= cuando terminó de cargar.
+2. =scripts/ipc_geometria.sh= consulta el protocolo =zdwl_ipc_unstable_v2= de
+   dwl y confirma que la ventana enfocada ocupa =0,0 1920x1080=.
+3. =scripts/capturar.sh= guarda el output =eDP-1= con =grim=.
+
+Las páginas se abren con =?tema=ejecutivo=, que carga
+=app/static/presentacion.css=: fondo blanco y acento azul oscuro, sin verde.
+El registro de geometría de cada captura queda en
+=evidencias/texto/07_capturas.txt=.

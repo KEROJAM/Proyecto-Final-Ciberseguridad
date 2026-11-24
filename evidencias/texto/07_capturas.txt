@@ -1,0 +1,17 @@
+Capturas regeneradas con grim -o eDP-1 y ventana a pantalla completa.
+Geometría verificada con el IPC de dwl (scripts/ipc_geometria.sh).
+
+capturas/documento/01_endpoints.png        ok       0,0 1920x1080 http://127.0.0.1:5000/?tema=ejecutivo
+capturas/documento/02_sqli_vulnerable.png  ok       0,0 1920x1080 http://127.0.0.1:5000/buscar?q=Delta%27%20OR%20%271%27%3D%271%27%20--&tema=ejecutivo
+capturas/documento/03_xss_vulnerable.png   ok       0,0 1920x1080 http://127.0.0.1:5000/comentarios?tema=ejecutivo
+capturas/documento/04_idor_vulnerable.png  ok       0,0 1920x1080 http://127.0.0.1:5000/expediente/1?tema=ejecutivo
+capturas/documento/05_zap_hallazgos.png    ok       0,0 1920x1080 file:///home/kerojam/Projects/Ciberseguridad/Proyecto-Final/evidencias/zap/zap_report.html
+capturas/documento/06_sqli_corregido.png   ok       0,0 1920x1080 http://127.0.0.1:5001/buscar?q=Delta%27%20OR%20%271%27%3D%271%27%20--&tema=ejecutivo
+capturas/documento/07_xss_corregido.png    ok       0,0 1920x1080 http://127.0.0.1:5001/comentarios?tema=ejecutivo
+capturas/documento/08_idor_corregido.png   error    0,0 1920x1080 http://127.0.0.1:5001/expediente/1?tema=ejecutivo
+capturas/documento/09_alertas_monitoreo.png ok       0,0 1920x1080 http://127.0.0.1:5001/alertas?tema=ejecutivo
+capturas/presentacion/01_contexto.png      ok       0,0 1920x1080 http://127.0.0.1:5001/?tema=ejecutivo
+capturas/presentacion/02_vulnerabilidades.png ok       0,0 1920x1080 http://127.0.0.1:5000/buscar?q=Delta%27%20OR%20%271%27%3D%271%27%20--&tema=ejecutivo
+capturas/presentacion/03_correciones.png   ok       0,0 1920x1080 http://127.0.0.1:5001/buscar?q=Delta%27%20OR%20%271%27%3D%271%27%20--&tema=ejecutivo
+capturas/presentacion/04_monitoreo.png     ok       0,0 1920x1080 http://127.0.0.1:5001/alertas?tema=ejecutivo
+capturas/presentacion/05_hallazgos_zap.png ok       0,0 1920x1080 file:///home/kerojam/Projects/Ciberseguridad/Proyecto-Final/evidencias/zap/zap_report.html

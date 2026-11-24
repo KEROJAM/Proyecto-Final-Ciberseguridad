@@ -1,0 +1,91 @@
+/* Tema ejecutivo: se carga con ?tema=ejecutivo en las capturas.
+   Fondo blanco y acento azul oscuro; sin tonos verdes. */
+html { scrollbar-width: none; }
+html::-webkit-scrollbar,
+body.tema-ejecutivo::-webkit-scrollbar { display: none; width: 0; height: 0; }
+
+body.tema-ejecutivo {
+  --bg: #ffffff;
+  --surface: #f4f8fc;
+  --ink: #14243b;
+  --muted: #52657d;
+  --line: #c9d7e6;
+  --accent: #123f7a;
+  --accent-soft: #e7eff8;
+  --warn: #8a4b00;
+  --warn-bg: #fff1dc;
+  --crit: #a4262c;
+  background: #ffffff;
+  color: var(--ink);
+  font-size: 21px;
+  line-height: 1.45;
+}
+body.tema-ejecutivo a { color: var(--accent); }
+body.tema-ejecutivo .topbar {
+  background: #0f2d54;
+  border-bottom: 4px solid var(--accent);
+  padding: 26px 56px;
+  color: #ffffff;
+}
+body.tema-ejecutivo .brand strong { font-size: 1.35rem; letter-spacing: .01em; }
+body.tema-ejecutivo .brand small { color: #c4d6eb; font-size: .82rem; }
+body.tema-ejecutivo .mark {
+  width: 64px; height: 64px; border-radius: 16px;
+  background: var(--accent); color: #ffffff; font-size: 1.2rem;
+}
+body.tema-ejecutivo nav,
+body.tema-ejecutivo footer { display: none; }
+body.tema-ejecutivo .mode {
+  padding: 14px 56px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: .95rem;
+  letter-spacing: .04em;
+  border-bottom: 1px solid var(--line);
+}
+body.tema-ejecutivo .mode-vulnerable { background: var(--warn-bg); color: var(--warn); }
+body.tema-ejecutivo main { max-width: 1560px; padding: 44px 56px 56px; }
+body.tema-ejecutivo h1 {
+  font-size: 3.1rem; line-height: 1.08; margin: 0 0 22px;
+  letter-spacing: -.02em;
+}
+body.tema-ejecutivo h2 { font-size: 1.75rem; margin: 0 0 18px; color: var(--accent); }
+body.tema-ejecutivo h3 { font-size: 1.3rem; margin: 22px 0 8px; }
+body.tema-ejecutivo .hero,
+body.tema-ejecutivo .card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 30px 38px;
+  margin: 22px 0;
+  box-shadow: 0 16px 40px rgba(18, 63, 122, .12);
+}
+body.tema-ejecutivo .hero { border-left: 8px solid var(--accent); }
+body.tema-ejecutivo .note,
+body.tema-ejecutivo dt { color: var(--muted); }
+body.tema-ejecutivo .warn { background: var(--warn-bg); color: var(--warn); border-color: var(--warn); }
+body.tema-ejecutivo .ok { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+body.tema-ejecutivo .error { background: #fdecec; color: var(--crit); }
+body.tema-ejecutivo table { font-size: 1.02rem; }
+body.tema-ejecutivo th,
+body.tema-ejecutivo td { padding: 14px 18px; border-color: var(--line); }
+body.tema-ejecutivo th { background: var(--accent-soft); color: var(--accent); }
+body.tema-ejecutivo code {
+  background: #e7eff8; color: var(--accent); padding: 2px 8px; border-radius: 6px;
+}
+body.tema-ejecutivo input,
+body.tema-ejecutivo textarea {
+  background: #ffffff; color: var(--ink); border-color: var(--line);
+}
+body.tema-ejecutivo button,
+body.tema-ejecutivo .button { background: var(--accent); color: #ffffff; }
+body.tema-ejecutivo .comment { background: #ffffff; border-color: var(--line); }
+body.tema-ejecutivo .metrics div {
+  background: var(--accent-soft); border: 1px solid var(--line); padding: 22px 30px;
+}
+body.tema-ejecutivo .metrics strong { font-size: 2.6rem; color: var(--accent); }
+body.tema-ejecutivo .badge { background: var(--accent-soft); color: var(--accent); }
+body.tema-ejecutivo .badge.alto,
+body.tema-ejecutivo .badge.critico { background: #fdecec; color: var(--crit); }
+body.tema-ejecutivo .badge.medio { background: var(--warn-bg); color: var(--warn); }
+body.tema-ejecutivo .user { color: #c4d6eb; }

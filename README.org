@@ -38,6 +38,10 @@ terminal. Los archivos =app/lab_*.sqlite3= y =logs/= se ignoran en Git.
 | =capturas/documento/=       | Capturas usadas en =INFORME.org=                                  |
 | =capturas/presentacion/=    | Capturas para la presentación ejecutiva (no incluida aquí)        |
 | =scripts/capturar.sh=       | Capturas con =grim= y =slurp=                                     |
+| =scripts/capturar_figuras.sh= | Regenera las 14 capturas a pantalla completa con el tema ejecutivo |
+| =scripts/ver_app.py=        | Ventana Qt a pantalla completa para las capturas                   |
+| =scripts/ipc_geometria.sh=  | Verifica la geometría de dwl mediante su protocolo IPC             |
+| =app/static/presentacion.css= | Tema blanco/azul oscuro activo con =?tema=ejecutivo=               |
 | =scripts/exportar.sh=       | Exportación de =INFORME.org= a =INFORME.pdf=                      |
 | =INFORME.org=               | Informe técnico en formato Org                                    |
 
@@ -70,6 +74,7 @@ La comparación ZAP antes/después se regenera con:
 #+begin_src bash
 lab/zap/scan.sh http://127.0.0.1:5000 evidencias/zap
 lab/zap/scan.sh http://127.0.0.1:5001 evidencias/zap/secure
+LAB_PASSWORD='ContraseñaDeLaboratorio' scripts/capturar_figuras.sh
 #+end_src
 
 * Seguridad de la entrega

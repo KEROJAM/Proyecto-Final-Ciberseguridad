@@ -133,6 +133,13 @@ fueron =/=, =/health=, =/login=, =/buscar=, =/comentarios=, =/expediente/<id>=,
 #+CAPTION: Aplicación de laboratorio en modo vulnerable con el índice de endpoints
 [[file:capturas/documento/01_endpoints.png]]
 
+Las imágenes se tomaron con =grim= sobre el output completo =eDP-1= (1920×1080),
+con la ventana del navegador a pantalla completa. Se abren con
+=?tema=ejecutivo=, que aplica un tema de fondo blanco y acento azul oscuro, y se
+verifica la geometría con el protocolo IPC de dwl; el detalle está en
+[[file:evidencias/texto/07_capturas.txt][07_capturas.txt]]. El mismo tema se usa en
+=capturas/presentacion/=, separadas del documento.
+
 OWASP ZAP se configuró en modo daemon contra la instancia vulnerable. El procedimiento,
 la versión y los informes quedan en [[file:lab/zap/README.org][lab/zap/README.org]] y el resumen
 legible en [[file:evidencias/zap/zap_resumen.txt][zap_resumen.txt]].
@@ -483,6 +490,7 @@ scripts/exportar.sh
 | [[file:evidencias/texto/04_idor_validacion.txt][04_idor_validacion.txt]] | Matriz de accesos por usuario y modo |
 | [[file:evidencias/texto/05_registros_monitoreo.txt][05_registros_monitoreo.txt]] | Eventos controlados y alertas correlacionadas |
 | [[file:evidencias/texto/06_zap_antes_despues.txt][06_zap_antes_despues.txt]] | Comparación de hallazgos ZAP antes/después |
+| [[file:evidencias/texto/07_capturas.txt][07_capturas.txt]] | Geometría y URLs de las 14 capturas |
 | [[file:evidencias/zap/zap_resumen.txt][zap_resumen.txt]] | Resumen de hallazgos de OWASP ZAP (vulnerable) |
 | [[file:evidencias/zap/secure/zap_resumen.txt][zap_resumen.txt (secure)]] | Resumen de hallazgos de OWASP ZAP (corregido) |
 | [[file:capturas/documento/][capturas/documento/]] | Capturas usadas en este informe |

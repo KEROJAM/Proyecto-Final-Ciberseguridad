@@ -296,6 +296,13 @@ def limitar_login():
     return None
 
 
+@app.context_processor
+def tema_plantillas():
+    """Tema ejecutivo opcional, solo para las capturas de presentación."""
+    tema = "ejecutivo" if request.args.get("tema") == "ejecutivo" else "laboratorio"
+    return {"tema": tema}
+
+
 # ---------------------------------------------------------------------------
 # Rutas
 # ---------------------------------------------------------------------------

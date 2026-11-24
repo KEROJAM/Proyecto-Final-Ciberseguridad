@@ -1,22 +1,30 @@
 #!/usr/bin/env python3
-"""Abre una página de la app en una ventana Qt para tomar capturas con grim.
+"""Abre una página de la app en una ventana Qt a pantalla completa para grim.
 
 Uso:
   LAB_PASSWORD='...' python3 scripts/ver_app.py URL [usuario]
 
-Si se indica usuario, se inicia sesión con requests y se copia la cookie de
-sesión al perfil de Qt. La contraseña se lee de LAB_PASSWORD y nunca se guarda.
-La ventana permanece abierta hasta que se cierra el proceso.
+Variables opcionales:
+  LAB_FULLSCREEN=1   pide fullscreen al compositor (dwl lo acepta).
+  LAB_READY_FILE     archivo marcador que se escribe cuando la página terminó
+                     de cargar y pintar; evita dormir un tiempo fijo.
+  LAB_ZOOM           factor de zoom (por ejemplo 1.1).
+
+La contraseña se lee de LAB_PASSWORD y nunca se guarda. La ventana permanece
+abierta hasta que se cierra el proceso.
 """
 
 from __future__ import annotations
 
 import os
 import sys
+from pathlib import Path
 from urllib.parse import urlparse
 
+os.environ.setdefault("QT_QPA_PLATFORM", "wayland")
+
 import requests
-from PyQt6.QtCore import QUrl
+from PyQt6.QtCore import QTimer, QUrl
 from PyQt6.QtNetwork import QNetworkCookie
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtWebEngineWidgets import QWebEngineView
@@ -43,10 +51,28 @@ def main() -> None:
         if r.status_code != 200 or "Salir" not in r.text:
             raise SystemExit(f"No se pudo autenticar como {usuario}")
 
+    ready = os.environ.get("LAB_READY_FILE", "")
+    if ready:
+        Path(ready).unlink(missing_ok=True)
+
+    def marcar_listo(ok: bool) -> None:
+        if not ready:
+            return
+        # Un pequeño margen permite el último repintado antes de que grim lea.
+        QTimer.singleShot(
+            800,
+            lambda: Path(ready).write_text("ok\n" if ok else "error\n", encoding="utf-8"),
+        )
+
     app = QApplication(sys.argv)
     view = QWebEngineView()
     view.setWindowTitle("Laboratorio · Ramírez & Asociados")
-    view.setGeometry(100, 60, 1440, 900)
+    view.setGeometry(0, 0, 1920, 1080)
+    view.loadFinished.connect(marcar_listo)
+
+    zoom = os.environ.get("LAB_ZOOM", "")
+    if zoom:
+        view.setZoomFactor(float(zoom))
 
     cookie_value = session.cookies.get("session")
     if cookie_value:
@@ -57,7 +83,10 @@ def main() -> None:
         view.page().profile().cookieStore().setCookie(cookie)
 
     view.load(QUrl(url))
-    view.show()
+    if os.environ.get("LAB_FULLSCREEN") == "1":
+        view.showFullScreen()
+    else:
+        view.show()
     app.exec()
 
 

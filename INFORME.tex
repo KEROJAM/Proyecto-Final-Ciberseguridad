@@ -1,4 +1,4 @@
-% Created 2026-11-24 Tue 17:42
+% Created 2026-11-24 Tue 17:50
 % Intended LaTeX compiler: pdflatex
 \documentclass[letterpaper]{article}
 
@@ -52,16 +52,16 @@ con un procedimiento de respuesta a incidentes alineado con el escenario de
 ransomware y con la distinción entre acciones probadas y recomendaciones.
 \end{abstract}
 \section{Resumen ejecutivo}
-\label{sec:orgfcd0ee2}
+\label{sec:orgba973b4}
 
 \subsection{Objetivo}
-\label{sec:orgb3eee80}
+\label{sec:orgb1b6b82}
 
 Evaluar vulnerabilidades comunes de aplicaciones web, implementar y validar medidas
 de protección, y desarrollar una mejora técnica que fortalezca la seguridad de la
 organización seleccionada en el avance.
 \subsection{Resultados verificables}
-\label{sec:org4bc9848}
+\label{sec:org0ae8fd8}
 
 \begin{center}
 \begin{tabularx}{\textwidth}{X|X|X|X}
@@ -77,7 +77,7 @@ OWASP ZAP (antes/después) & 3 alto, 20 medio, 19 bajo, 99 informativo & 0 alto,
 \end{tabularx}
 \end{center}
 \subsection{Alcance y límites}
-\label{sec:org8ec994b}
+\label{sec:orgeb4b449}
 
 \begin{itemize}
 \item Todo el tráfico se generó contra \texttt{127.0.0.1} (puertos 5000 y 5001). No se escanearon
@@ -88,10 +88,10 @@ por variable de entorno y no se versionan.
 es la que debe tomarse como referencia de diseño.
 \end{itemize}
 \section{Contexto de la organización (Actividad 6)}
-\label{sec:orgcd9a99e}
+\label{sec:orge7ac1f9}
 
 \subsection{Ficha institucional}
-\label{sec:orgbca7f4a}
+\label{sec:orgf9e07a6}
 
 \begin{center}
 \begin{tabular}{ll}
@@ -106,7 +106,7 @@ Datos sensibles & RFC/CURP, ingresos, datos bancarios, nóminas, casos legales\\
 \end{tabular}
 \end{center}
 \subsection{Escenario de ransomware retomado}
-\label{sec:org116334f}
+\label{sec:org2970314}
 
 Un auxiliar abrió el correo ficticio \texttt{"Factura pendiente de pago.zip"} un viernes a
 las 17:40. El archivo cifró el servidor de archivos y, como el NAS de respaldo estaba
@@ -114,7 +114,7 @@ montado con las mismas credenciales, también cifró los respaldos. El lunes no 
 podían abrir expedientes ni emitir declaraciones: tres días de paro, riesgo de multa
 fiscal y una nota de rescate por 2 BTC.
 \subsection{Riesgos principales del avance}
-\label{sec:org08c2d78}
+\label{sec:orgdf90355}
 
 \begin{center}
 \begin{tabular}{llrll}
@@ -128,7 +128,7 @@ Correo sin filtrado & Bandeja de entrada & 25 & Crítico & Filtrado, ClamAV y ca
 \end{tabular}
 \end{center}
 \subsection{Controles previamente implementados y verificados}
-\label{sec:orgd2c64b2}
+\label{sec:org632ca7e}
 
 \begin{itemize}
 \item MFA TOTP en SSH: \texttt{s\_tio} permitido con contraseña + código; \texttt{c\_contador} y
@@ -144,7 +144,7 @@ con \texttt{sha256sum} idéntico.
 tráfico POST capturado con Wireshark.
 \end{itemize}
 \subsection{Medidas que quedaron como propuestas}
-\label{sec:org434c9fa}
+\label{sec:org160220d}
 
 \begin{itemize}
 \item HTTPS y filtrado de correo para la landing page y la mensajería.
@@ -157,10 +157,10 @@ avance y motivó la mejora de esta etapa.
 La evidencia de esta etapa previa se resume en
 \href{../INFORME\_EVIDENCIAS.md}{INFORME\textsubscript{EVIDENCIAS.md}} y en la carpeta \texttt{../evidencias/}.
 \section{Parte A. Evaluación y protección de una aplicación web}
-\label{sec:orga0d2064}
+\label{sec:org9eea986}
 
 \subsection{Actividad 1. Preparación del entorno}
-\label{sec:orge4675ef}
+\label{sec:org85cc1f8}
 
 Se creó una aplicación Flask única conmutada por la variable \texttt{LAB\_MODE}:
 
@@ -180,11 +180,18 @@ fueron \texttt{/}, \texttt{/health}, \texttt{/login}, \texttt{/buscar}, \texttt{
 \caption{Aplicación de laboratorio en modo vulnerable con el índice de endpoints}
 \end{figure}
 
+Las imágenes se tomaron con \texttt{grim} sobre el output completo \texttt{eDP-1} (1920×1080),
+con la ventana del navegador a pantalla completa. Se abren con
+\texttt{?tema=ejecutivo}, que aplica un tema de fondo blanco y acento azul oscuro, y se
+verifica la geometría con el protocolo IPC de dwl; el detalle está en
+\href{evidencias/texto/07\_capturas.txt}{07\textsubscript{capturas.txt}}. El mismo tema se usa en
+\texttt{capturas/presentacion/}, separadas del documento.
+
 OWASP ZAP se configuró en modo daemon contra la instancia vulnerable. El procedimiento,
 la versión y los informes quedan en \href{lab/zap/README.org}{lab/zap/README.org} y el resumen
 legible en \href{evidencias/zap/zap\_resumen.txt}{zap\textsubscript{resumen.txt}}.
 \subsection{Metodología de pruebas}
-\label{sec:orgb4723bc}
+\label{sec:org55623a7}
 
 Para cada vulnerabilidad se documentó: componente afectado, descripción, procedimiento,
 resultado observado, riesgo e impacto. Después de la corrección se repitió exactamente
@@ -201,10 +208,10 @@ Navegador Qt & Evidencia visual de las respuestas & Capturas con \texttt{grim} y
 \end{tabular}
 \end{center}
 \subsection{Actividad 2 y 4. Inyección SQL (CWE-89)}
-\label{sec:org778f1ce}
+\label{sec:orga062268}
 
 \subsubsection{Componente y problema}
-\label{sec:org9b7dcb9}
+\label{sec:orgd834499}
 
 \texttt{/buscar} construía la sentencia con concatenación de texto:
 
@@ -215,7 +222,7 @@ sql = ("SELECT id, cliente, descripcion, importe FROM expedientes "
 filas = conn.execute(sql).fetchall()
 \end{verbatim}
 \subsubsection{Procedimiento}
-\label{sec:org2d35105}
+\label{sec:org24bf8c3}
 
 \begin{enumerate}
 \item Abrir \texttt{/buscar} sin filtro y contar resultados de referencia.
@@ -224,7 +231,7 @@ por la aplicación.
 \item Repetir la misma URL en el modo corregido.
 \end{enumerate}
 \subsubsection{Resultado observado}
-\label{sec:org2be9bcc}
+\label{sec:org64a462c}
 
 En el modo vulnerable la respuesta pasó de 1 expediente ("Constructora Delta") a
 \textbf{5 expedientes}, incluidos los propiedad de otros perfiles. En el modo corregido la
@@ -242,7 +249,7 @@ misma entrada devolvió \textbf{0 filas}: el payload se comparó como texto lite
 \caption{Misma payload en la versión corregida: sin resultados inesperados}
 \end{figure}
 \subsubsection{Corrección}
-\label{sec:org19401af}
+\label{sec:org8800d4f}
 
 \begin{verbatim}
 # DESPUÉS (modo seguro): parámetros + validación de longitud
@@ -257,17 +264,17 @@ filas = conn.execute(
 Además se registra \texttt{SQLI\_DETECTADO} cuando la entrada coincide con un patrón de
 inyección, aunque la consulta parametrizada ya neutralice el efecto.
 \subsubsection{Riesgo e impacto y por qué el control reduce el riesgo}
-\label{sec:org9b4764d}
+\label{sec:orgaf04316}
 
 Lectura no autorizada de expedientes, posible modificación si el usuario de base de
 datos tuviera permisos de escritura y exposición de RFC o montos. La parametrización
 separa código de datos: el motor SQLite compila la consulta antes de enlazar el valor,
 por lo que las comillas del atacante no pueden alterar la gramática SQL.
 \subsection{Actividad 2 y 4. Cross-Site Scripting (CWE-79)}
-\label{sec:orgf6df238}
+\label{sec:orge9ffe79}
 
 \subsubsection{Componente y problema}
-\label{sec:org52d7dd5}
+\label{sec:orgd7b0a02}
 
 \texttt{/comentarios} almacenaba texto del usuario y la plantilla lo insertaba con \texttt{|safe}:
 
@@ -276,7 +283,7 @@ por lo que las comillas del atacante no pueden alterar la gramática SQL.
 {% if modo == 'vulnerable' %}{{ c.texto|safe }}{% else %}{{ c.texto }}{% endif %}
 \end{verbatim}
 \subsubsection{Procedimiento}
-\label{sec:org774ad68}
+\label{sec:org3d3095e}
 
 \begin{enumerate}
 \item Iniciar sesión como \texttt{s\_tio} y publicar
@@ -285,7 +292,7 @@ por lo que las comillas del atacante no pueden alterar la gramática SQL.
 \item Repetir en el modo corregido y revisar la cabecera \texttt{Content-Security-Policy}.
 \end{enumerate}
 \subsubsection{Resultado observado}
-\label{sec:orgf84233a}
+\label{sec:orgba2d0f7}
 
 Antes, el HTML contenía \texttt{<script>} literal y el navegador ejecutaba \texttt{alert()}.
 Después, el HTML contiene \texttt{\&lt;script\&gt;} y la cabecera CSP es
@@ -297,7 +304,7 @@ Después, el HTML contiene \texttt{\&lt;script\&gt;} y la cabecera CSP es
 \caption{XSS reflejado en la versión vulnerable}
 \end{figure}
 \subsubsection{Corrección}
-\label{sec:org5ba56d0}
+\label{sec:orgc4f6bcc}
 
 \begin{verbatim}
 # La plantilla usa autoescape por defecto en modo seguro: {{ c.texto }}
@@ -308,22 +315,22 @@ respuesta.headers["Content-Security-Policy"] = (
 )
 \end{verbatim}
 \subsubsection{Riesgo e impacto y por qué el control reduce el riesgo}
-\label{sec:org9b174cc}
+\label{sec:org8b537f9}
 
 Robo de cookie de sesión, acciones suplantadas, phishing dentro del origen legítimo y
 desfiguración. El autoescape convierte caracteres especiales en entidades HTML según
 el contexto; CSP constituye una segunda capa que bloquearía scripts inline aunque se
 filtrara HTML por otra vía.
 \subsection{Actividad 2 y 4. Control de acceso roto: IDOR/BOLA (CWE-639)}
-\label{sec:org1c8f77b}
+\label{sec:orgbad5faf}
 
 \subsubsection{Componente y problema}
-\label{sec:org1edee99}
+\label{sec:org72f3d40}
 
 \texttt{/expediente/<id>} y \texttt{/api/expediente/<id>} buscaban el recurso por identificador y lo
 entregaban sin comparar \texttt{owner\_id} con el usuario de la sesión.
 \subsubsection{Procedimiento}
-\label{sec:org5cd2951}
+\label{sec:orga21b9af}
 
 \begin{enumerate}
 \item Iniciar sesión como \texttt{a\_auxiliar}.
@@ -332,7 +339,7 @@ entregaban sin comparar \texttt{owner\_id} con el usuario de la sesión.
 acceso de \texttt{s\_tio} al id 1.
 \end{enumerate}
 \subsubsection{Resultado observado}
-\label{sec:org8b938c6}
+\label{sec:org98a6ad0}
 
 \begin{center}
 \begin{tabular}{llr}
@@ -357,7 +364,7 @@ Petición & Vulnerable & Corregido\\
 \caption{Denegación 403 en la versión corregida}
 \end{figure}
 \subsubsection{Corrección}
-\label{sec:orgac678b6}
+\label{sec:org780ebb0}
 
 \begin{verbatim}
 permitido = bool(
@@ -369,14 +376,14 @@ if not permitido:
     abort(403)
 \end{verbatim}
 \subsubsection{Riesgo e impacto y por qué el control reduce el riesgo}
-\label{sec:orgfd0b7e7}
+\label{sec:org56b28d1}
 
 Escalada horizontal y vertical, lectura y modificación de expedientes de otros
 clientes, incumplimiento de LFPDPPP y pérdida de trazabilidad. La autorización se
 ejecuta en el servidor para cada objeto y acción, con denegación por defecto; la
 interfaz nunca es la única barrera.
 \subsection{Actividad 4. Validación consolidada y resultados de OWASP ZAP}
-\label{sec:orgeac6cf2}
+\label{sec:org11c5b4d}
 
 \begin{center}
 \begin{tabularx}{\textwidth}{X|X|X|X|X}
@@ -415,7 +422,7 @@ control se validó únicamente con las pruebas manuales autenticadas.
 \caption{Resumen de hallazgos de OWASP ZAP sobre la aplicación vulnerable}
 \end{figure}
 \subsection{Actividad 5. Análisis de registros}
-\label{sec:org5966f47}
+\label{sec:org40b4c3b}
 
 Se generaron eventos controlados: tres inicios de sesión fallidos, una petición con
 patrón SQLi, un comentario con patrón XSS y dos accesos denegados. La aplicación
@@ -438,10 +445,10 @@ sea 403 o la entrada se muestre escapada.
 \item Conservar usuario, IP y recurso para la investigación y la notificación.
 \end{itemize}
 \section{Parte B. Fortalecimiento de la organización}
-\label{sec:org41fde2d}
+\label{sec:org62ea99e}
 
 \subsection{Actividad 7. Selección de la mejora}
-\label{sec:org8e3d8fc}
+\label{sec:orgfb903a8}
 
 Se eligió la \textbf{Opción B: Monitoreo y detección}, porque el avance dejó como limitación
 explícita que MFA cubría SSH pero no aplicaciones web, y el escenario de ransomware
@@ -449,10 +456,10 @@ mostró que la organización no tenía visibilidad central de eventos de segurid
 La mejora es verificable: hay eventos persistidos, reglas con umbrales, alertas
 correlacionadas y un panel consultable.
 \subsection{Actividad 8. Evaluación de resultados}
-\label{sec:orgfbe98c4}
+\label{sec:org035b40e}
 
 \subsubsection{Riesgo que motivó la mejora y situación inicial}
-\label{sec:org79bc3a0}
+\label{sec:orge9251d2}
 
 El riesgo es la falta de detección temprana de abuso de credenciales y de accesos
 indebidos a expedientes (P × I = 16, Alto en la matriz del avance). Antes de la mejora,
@@ -460,7 +467,7 @@ la aplicación devolvía respuestas HTTP correctas pero no dejaba rastro correla
 un atacante podía probar credenciales o iterar identificadores sin generar ninguna
 señal para el despacho.
 \subsubsection{Solución implementada}
-\label{sec:org57d533a}
+\label{sec:orga9a6b66}
 
 \begin{center}
 \begin{tabular}{lll}
@@ -480,7 +487,7 @@ Límite de intentos & \texttt{before\_request} en \texttt{/login} & 10 intentos 
 \caption{Panel de monitoreo y detección con alertas correlacionadas}
 \end{figure}
 \subsubsection{Pruebas y resultados}
-\label{sec:orgf1de57e}
+\label{sec:org564127f}
 
 Se repitieron las pruebas de la Parte A sobre el modo corregido y se añadieron eventos
 de login fallido, SQLi, XSS y acceso denegado. Resultados:
@@ -497,7 +504,7 @@ Estas cifras corresponden a una ejecución de
 \href{lab/pruebas/probar.py}{probar.py}; al repetirlo los contadores pueden aumentar,
 pero el veredicto de cada regla se mantiene.
 \subsubsection{Limitaciones y riesgos pendientes}
-\label{sec:org82a9c4c}
+\label{sec:org98b9369}
 
 \begin{itemize}
 \item El registro y el límite de intentos viven en la memoria del proceso: al reiniciar
@@ -515,7 +522,7 @@ en el avance.
 mediante un reverse proxy.
 \end{itemize}
 \section{Actividad 9. Respuesta a incidentes}
-\label{sec:org628fb2e}
+\label{sec:orgace8796}
 
 Procedimiento breve para un incidente de ransomware sobre el despacho, relacionado con
 la narrativa de \texttt{"Factura pendiente de pago.zip"}.
@@ -538,7 +545,7 @@ alertas, se restaura desde el último respaldo íntegro y solo se reintegra el s
 después de verificar los controles. Las acciones marcadas como recomendación no se
 ejecutaron sobre sistemas productivos porque el laboratorio está aislado.
 \section{Conclusiones}
-\label{sec:org872e895}
+\label{sec:org28decd5}
 
 \begin{enumerate}
 \item Las tres vulnerabilidades exigidas se reprodujeron con peticiones concretas y se
@@ -558,10 +565,10 @@ aislado, y en producción harían falta HTTPS, MFA en la web, SIEM y revisión
 periódica de reglas.
 \end{enumerate}
 \section{Anexos}
-\label{sec:orgc716caf}
+\label{sec:orgf1d819e}
 
 \subsection{A. Repositorio y comandos de reproducción}
-\label{sec:orgefba509}
+\label{sec:org2949537}
 
 El proyecto se entrega como repositorio local en \texttt{\textasciitilde{}/Projects/Ciberseguridad/Proyecto-Final}.
 Para publicarlo, crear el repositorio remoto y añadirlo con \texttt{git remote add origin <URL>};
@@ -580,7 +587,7 @@ lab/zap/scan.sh http://127.0.0.1:5001 evidencias/zap/secure
 scripts/exportar.sh
 \end{verbatim}
 \subsection{B. Índice de evidencias}
-\label{sec:org1ab0cf2}
+\label{sec:orgeed155c}
 
 \begin{center}
 \begin{tabular}{ll}
@@ -592,6 +599,7 @@ Archivo & Contenido\\
 \href{evidencias/texto/04\_idor\_validacion.txt}{04\textsubscript{idor}\textsubscript{validacion.txt}} & Matriz de accesos por usuario y modo\\
 \href{evidencias/texto/05\_registros\_monitoreo.txt}{05\textsubscript{registros}\textsubscript{monitoreo.txt}} & Eventos controlados y alertas correlacionadas\\
 \href{evidencias/texto/06\_zap\_antes\_despues.txt}{06\textsubscript{zap}\textsubscript{antes}\textsubscript{despues.txt}} & Comparación de hallazgos ZAP antes/después\\
+\href{evidencias/texto/07\_capturas.txt}{07\textsubscript{capturas.txt}} & Geometría y URLs de las 14 capturas\\
 \href{evidencias/zap/zap\_resumen.txt}{zap\textsubscript{resumen.txt}} & Resumen de hallazgos de OWASP ZAP (vulnerable)\\
 \href{evidencias/zap/secure/zap\_resumen.txt}{zap\textsubscript{resumen.txt} (secure)} & Resumen de hallazgos de OWASP ZAP (corregido)\\
 \href{capturas/documento/}{capturas/documento/} & Capturas usadas en este informe\\
@@ -599,7 +607,7 @@ Archivo & Contenido\\
 \end{tabular}
 \end{center}
 \subsection{C. Consideraciones éticas}
-\label{sec:orgb2e8b9d}
+\label{sec:orgddc3eee}
 
 \begin{itemize}
 \item Solo se usaron entornos locales autorizados y datos ficticios.
