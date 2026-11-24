@@ -1,0 +1,51 @@
+========================================================================
+Evidencia generada: 2026-11-24T23:40:41+00:00
+Entorno: laboratorio local autorizado · datos ficticios
+========================================================================
+
+COMPARACIÓN DE OWASP ZAP 2.17.0 ANTES Y DESPUÉS DE LAS CORRECCIONES
+
+Objetivo vulnerable : http://127.0.0.1:5000  (LAB_MODE=vulnerable)
+Objetivo corregido  : http://127.0.0.1:5001  (LAB_MODE=secure)
+Método              : spider + passive scan + active scan en ambos objetivos
+
+| Nivel        | Vulnerable | Corregido | Cambio |
+|--------------+------------+-----------+--------|
+| High         | 3          | 0         | -3     |
+| Medium       | 20         | 3         | -17    |
+| Low          | 19         | 18        | -1     |
+| Informational| 99         | 111       | +12    |
+
+Hallazgos High en la versión vulnerable (desaparecen en la corregida):
+  * Cross Site Scripting (Persistent) → /comentarios, parámetro texto
+  * Cross Site Scripting (Reflected)  → /comentarios, parámetro texto
+  * SQL Injection                     → /buscar?q=', error 500
+
+Hallazgos Medium que desaparecen con la corrección:
+  * Content Security Policy (CSP) Header Not Set (11 → 0)
+    La versión corregida envía:
+      Content-Security-Policy: default-src 'self'; script-src 'self';
+      object-src 'none'; base-uri 'none'; frame-ancestors 'none';
+      form-action 'self'
+      X-Frame-Options: DENY
+  * Missing Anti-clickjacking Header (6 → 0) gracias a X-Frame-Options: DENY.
+
+Hallazgos Medium que permanecen en la versión corregida:
+  * Absence of Anti-CSRF Tokens (3): /login (x2) y /comentarios.
+    Se documenta como riesgo pendiente; la aplicación de laboratorio no
+    implementa tokens anti-CSRF y no debe exponerse a producción sin ellos.
+
+Hallazgos Low restantes:
+  * Server Leaks Version Information (18): cabecera "Server" de Werkzeug.
+    En producción debe eliminarse o sustituirse por un reverse proxy.
+
+Conclusión: las tres vulnerabilidades obligatorias dejaron de aparecer como
+riesgo alto en ZAP y las cabeceras de seguridad añadidas eliminaron 17 alertas
+medias. ZAP no detectó IDOR/BOLA automáticamente en ninguna de las dos pasadas,
+por lo que ese control se validó con pruebas manuales autenticadas.
+
+Informes completos:
+  evidencias/zap/zap_resumen.txt        (vulnerable)
+  evidencias/zap/zap_report.html        (vulnerable)
+  evidencias/zap/secure/zap_resumen.txt (corregido)
+  evidencias/zap/secure/zap_reporte.html (corregido)

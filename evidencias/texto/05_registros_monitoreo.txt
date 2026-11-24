@@ -1,0 +1,32 @@
+========================================================================
+Evidencia generada: 2026-11-24T23:33:55.174632+00:00
+Entorno: laboratorio local autorizado · datos ficticios
+========================================================================
+
+ACTIVIDAD 5 Y PARTE B · ANÁLISIS DE REGISTROS Y DETECCIÓN
+Eventos controlados generados: 3 login fallidos, 1 patrón SQLi, 1 patrón XSS,
+2 accesos denegados a expedientes ajenos.
+
+GET /api/alertas -> 200
+GET /alertas (panel HTML) -> 200
+Eventos en memoria: 17
+Conteo por tipo: {"ACCESO_DENEGADO": 4, "ACCESO_PERMITIDO": 2, "LOGIN_FALLIDO": 3, "LOGIN_OK": 4, "SQLI_DETECTADO": 2, "XSS_DETECTADO": 2}
+
+Alertas correlacionadas:
+  AL-541B89A5 · Fallos de autenticación concentrados · severidad=medio · 3/3 eventos en 60s
+  AL-3047B8B8 · Intentos de acceso no autorizado a recursos · severidad=medio · 4/2 eventos en 60s
+  AL-762D62FD · Posible XSS enviado a comentarios · severidad=alto · 2/1 eventos en 60s
+  AL-5622FEEF · Posible inyección SQL detectada · severidad=alto · 2/1 eventos en 60s
+
+Muestra de eventos (últimos 6):
+  23:33:55 ACCESO_DENEGADO  alto    a_auxiliar   /expediente/2 -> 403
+  23:33:55 ACCESO_DENEGADO  alto    a_auxiliar   /expediente/1 -> 403
+  23:33:55 XSS_DETECTADO    alto    s_tio        /comentarios -> 200
+  23:33:55 SQLI_DETECTADO   alto    anónimo      /buscar -> 200
+  23:33:55 LOGIN_FALLIDO    medio   anónimo      /login -> 401
+  23:33:55 LOGIN_FALLIDO    medio   anónimo      /login -> 401
+
+Lectura para detección: los patrones SQLi/XSS se registran aunque el ataque
+sea bloqueado; los fallos de login y las denegaciones se correlacionan por
+ventana temporal. Esto permite priorizar la investigación y reconstruir
+la secuencia de un incidente sin depender solo del resultado HTTP.

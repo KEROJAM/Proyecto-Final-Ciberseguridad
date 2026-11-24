@@ -1,0 +1,46 @@
+{
+  "version": "1.0",
+  "descripcion": "Reglas de correlación del mecanismo de monitoreo y detección (Parte B, Opción B).",
+  "reglas": [
+    {
+      "id": "SQLI-001",
+      "tipo": "SQLI_DETECTADO",
+      "titulo": "Posible inyección SQL detectada",
+      "umbral": 1,
+      "ventana_segundos": 60,
+      "severidad": "alto"
+    },
+    {
+      "id": "XSS-001",
+      "tipo": "XSS_DETECTADO",
+      "titulo": "Posible XSS enviado a comentarios",
+      "umbral": 1,
+      "ventana_segundos": 60,
+      "severidad": "alto"
+    },
+    {
+      "id": "ACCESO-001",
+      "tipo": "ACCESO_DENEGADO",
+      "titulo": "Intentos de acceso no autorizado a recursos",
+      "umbral": 2,
+      "ventana_segundos": 60,
+      "severidad": "medio"
+    },
+    {
+      "id": "LOGIN-001",
+      "tipo": "LOGIN_FALLIDO",
+      "titulo": "Fallos de autenticación concentrados",
+      "umbral": 3,
+      "ventana_segundos": 60,
+      "severidad": "medio"
+    },
+    {
+      "id": "RATE-001",
+      "tipo": "RATE_LIMIT",
+      "titulo": "Límite de intentos de login alcanzado",
+      "umbral": 1,
+      "ventana_segundos": 60,
+      "severidad": "bajo"
+    }
+  ]
+}

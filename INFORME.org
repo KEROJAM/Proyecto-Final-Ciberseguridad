@@ -1,0 +1,496 @@
+#+TITLE: Informe técnico · Proyecto final de Ciberseguridad
+#+DATE: 24 11 2026
+#+AUTHOR: Jahil Majorek Casas Sánchez
+#+LANGUAGE: es
+#+LATEX_CLASS: article
+#+latex_class_options: [letterpaper]
+#+LATEX_HEADER: \input{~/Documents/Clases/sample.tex}
+#+LATEX_HEADER: \renewcommand{\certificado}{CiberSeguridad}
+#+LATEX_HEADER: \renewcommand{\matricula}{AL07083340}
+#+LATEX_HEADER: \renewcommand{\docente}{Francisco Gómez Rubio}
+#+OPTIONS: toc:t
+
+Repositorio de trabajo: [[file:README.org][Proyecto-Final/]] · *pendiente de publicar en GitHub* (este entorno no tiene credenciales de publicación).
+
+#+BEGIN_abstract
+Este informe continúa el avance del proyecto de ciberseguridad del despacho ficticio
+*Ramírez & Asociados, S.C.* Tras diagnosticar riesgos, aplicar controles de accesos,
+cifrado, respaldos y firewall en la etapa anterior, se evalúa ahora la superficie web
+de la organización. Se construyó una aplicación Flask de laboratorio con dos modos:
+uno deliberadamente vulnerable y otro corregido. Se reprodujeron y mitigaron
+inyección SQL, XSS y control de acceso roto (IDOR/BOLA), y se implementó un mecanismo
+de monitoreo y detección como mejora específica (Opción B).
+
+Las pruebas muestran que el payload ~Delta' OR '1'='1' --~ pasó de devolver 5
+expedientes a 0; el script =<script>alert('XSS-PROYECTO-FINAL')</script>= pasó de
+ejecutarse a mostrarse escapado con CSP; y el usuario =a_auxiliar= pasó de leer el
+expediente de =s_tio= (200) a recibir 403. El registro de eventos correlacionó fallos
+de login, patrones de ataque y accesos denegados en alertas verificables. Se cierra
+con un procedimiento de respuesta a incidentes alineado con el escenario de
+ransomware y con la distinción entre acciones probadas y recomendaciones.
+#+END_abstract
+
+* Resumen ejecutivo
+
+** Objetivo
+
+Evaluar vulnerabilidades comunes de aplicaciones web, implementar y validar medidas
+de protección, y desarrollar una mejora técnica que fortalezca la seguridad de la
+organización seleccionada en el avance.
+
+** Resultados verificables
+
+#+ATTR_LATEX: :environment tabularx :width \textwidth :align X|X|X|X
+| Área                         | Resultado antes              | Resultado después                          | Evidencia                                                    |
+|------------------------------+------------------------------+--------------------------------------------+--------------------------------------------------------------|
+| Preparación del entorno      | Aplicación y endpoints en 127.0.0.1 | 5 rutas verificadas en cada modo     | [[file:evidencias/texto/01_entorno_endpoints.txt][01_entorno_endpoints.txt]] |
+| SQL Injection                | 5 filas con payload          | 0 filas; consulta parametrizada            | [[file:evidencias/texto/02_sqli_validacion.txt][02_sqli_validacion.txt]]   |
+| XSS                          | Script sin escapar en HTML   | =<script>= escapado + CSP                  | [[file:evidencias/texto/03_xss_validacion.txt][03_xss_validacion.txt]]     |
+| IDOR/BOLA                    | Expediente ajeno 200         | 403 para =a_auxiliar=; 200 para propietario| [[file:evidencias/texto/04_idor_validacion.txt][04_idor_validacion.txt]]   |
+| Registros y detección        | Sin correlación              | 4 alertas de reglas + panel               | [[file:evidencias/texto/05_registros_monitoreo.txt][05_registros_monitoreo.txt]] |
+| Mejora organizacional (Opción B) | Sin visibilidad central   | Eventos JSON + reglas + panel =/alertas=   | [[file:lab/monitoreo/reglas.json][reglas.json]]                          |
+| OWASP ZAP (antes/después)    | 3 alto, 20 medio, 19 bajo, 99 informativo | 0 alto, 3 medio, 18 bajo, 111 informativo | [[file:evidencias/texto/06_zap_antes_despues.txt][06_zap_antes_despues.txt]] |
+
+** Alcance y límites
+
+- Todo el tráfico se generó contra =127.0.0.1= (puertos 5000 y 5001). No se escanearon
+  sistemas de terceros.
+- Los datos, clientes, montos y cuentas son ficticios. Las credenciales se inyectan
+  por variable de entorno y no se versionan.
+- La versión vulnerable se conserva únicamente como laboratorio; la versión corregida
+  es la que debe tomarse como referencia de diseño.
+
+* Contexto de la organización (Actividad 6)
+
+** Ficha institucional
+
+| Campo                  | Valor                                                             |
+|------------------------+-------------------------------------------------------------------|
+| Organización           | Ramírez & Asociados, S.C. (ficticia)                               |
+| Industria              | Contabilidad, nómina y asesoría legal para pyMEs                   |
+| Tamaño                 | 28 empleados, 3 socios, alrededor de 180 clientes                 |
+| Ubicación              | Ciudad de México (LFPDPPP; GDPR para clientes internacionales)     |
+| Servicios críticos     | Declaraciones fiscales, nóminas, expedientes contables y legales   |
+| Datos sensibles        | RFC/CURP, ingresos, datos bancarios, nóminas, casos legales        |
+
+** Escenario de ransomware retomado
+
+Un auxiliar abrió el correo ficticio ="Factura pendiente de pago.zip"= un viernes a
+las 17:40. El archivo cifró el servidor de archivos y, como el NAS de respaldo estaba
+montado con las mismas credenciales, también cifró los respaldos. El lunes no se
+podían abrir expedientes ni emitir declaraciones: tres días de paro, riesgo de multa
+fiscal y una nota de rescate por 2 BTC.
+
+** Riesgos principales del avance
+
+| Riesgo | Activo | P × I | Nivel | Control propuesto en el avance |
+|--------|--------|-------+-------+--------------------------------|
+| Permisos amplios en archivos compartidos | Expedientes contables | 20 | Crítico | Mínimo privilegio por grupo |
+| NAS con credenciales iguales y montado | Respaldos | 15 | Crítico | Segmentación y "air-gap" |
+| Cuentas sin separación de privilegios | Cuentas locales | 9 | Alto | Grupos socio/contador/auxiliar |
+| SSH sin MFA | Acceso remoto | 16 | Crítico | TOTP vía =pam_google_authenticator= |
+| Correo sin filtrado | Bandeja de entrada | 25 | Crítico | Filtrado, ClamAV y capacitación |
+
+** Controles previamente implementados y verificados
+
+- MFA TOTP en SSH: =s_tio= permitido con contraseña + código; =c_contador= y
+  =a_auxiliar= denegados por política PAM.
+- Perfiles funcionales: =grupo_socio= (2001), =grupo_contador= (2002) y
+  =grupo_auxiliar= (2003), con ACL y SETGID sobre =/srv/files=.
+- Firewall =nftables= con política =drop=, SSH limitado a 3 intentos/minuto y
+  SMB/CUPS solo desde la red interna.
+- Cifrado LUKS1 en contenedor de prueba y LUKS2 en disco de respaldo.
+- Respaldos diarios con =rsync=, retención de 90 días y restauración verificada
+  con =sha256sum= idéntico.
+- Simulación GoPhish: 5 correos, 5 aperturas, 5 clics y 3 formularios enviados;
+  tráfico POST capturado con Wireshark.
+
+** Medidas que quedaron como propuestas
+
+- HTTPS y filtrado de correo para la landing page y la mensajería.
+- Extender MFA a aplicaciones web (no solo SSH). Era una limitación explícita del
+  avance y motivó la mejora de esta etapa.
+- Diagramas de red propuestos con tres segmentos y NAS aislado.
+- Rotación completa de 90 días (configurada, pero no esperada en el laboratorio).
+
+La evidencia de esta etapa previa se resume en
+[[file:../INFORME_EVIDENCIAS.md][INFORME_EVIDENCIAS.md]] y en la carpeta =../evidencias/=.
+
+* Parte A. Evaluación y protección de una aplicación web
+
+** Actividad 1. Preparación del entorno
+
+Se creó una aplicación Flask única conmutada por la variable =LAB_MODE=:
+
+- =vulnerable= en =http://127.0.0.1:5000=: conserva las tres debilidades.
+- =secure= en =http://127.0.0.1:5001=: incluye las correcciones y el monitoreo.
+
+Cada modo usa su propia base SQLite y su directorio de registros, para que las
+pruebas "antes" y "después" no se contaminen mutuamente. Los endpoints verificados
+fueron =/=, =/health=, =/login=, =/buscar=, =/comentarios=, =/expediente/<id>=,
+=/api/expediente/<id>=, =/alertas= y =/api/alertas=.
+
+#+CAPTION: Aplicación de laboratorio en modo vulnerable con el índice de endpoints
+[[file:capturas/documento/01_endpoints.png]]
+
+OWASP ZAP se configuró en modo daemon contra la instancia vulnerable. El procedimiento,
+la versión y los informes quedan en [[file:lab/zap/README.org][lab/zap/README.org]] y el resumen
+legible en [[file:evidencias/zap/zap_resumen.txt][zap_resumen.txt]].
+
+** Metodología de pruebas
+
+Para cada vulnerabilidad se documentó: componente afectado, descripción, procedimiento,
+resultado observado, riesgo e impacto. Después de la corrección se repitió exactamente
+la misma petición y se comparó la respuesta. Las pruebas manuales se automatizaron en
+[[file:lab/pruebas/probar.py][probar.py]], que regenera los archivos de =evidencias/texto/=.
+
+| Herramienta | Uso | Resultado |
+|-------------+-----+-----------|
+| =curl= / =requests= | Reproducción manual de payloads | Antes/después por vulnerabilidad |
+| OWASP ZAP | Spider y escaneo activo sobre la app vulnerable | Informes JSON/HTML y resumen |
+| Navegador Qt | Evidencia visual de las respuestas | Capturas con =grim= y =slurp= |
+
+** Actividad 2 y 4. Inyección SQL (CWE-89)
+
+*** Componente y problema
+
+=/buscar= construía la sentencia con concatenación de texto:
+
+#+begin_src python
+# ANTES (modo vulnerable)
+sql = ("SELECT id, cliente, descripcion, importe FROM expedientes "
+       f"WHERE cliente LIKE '%{q}%'")
+filas = conn.execute(sql).fetchall()
+#+end_src
+
+*** Procedimiento
+
+1. Abrir =/buscar= sin filtro y contar resultados de referencia.
+2. Enviar ~q=Delta' OR '1'='1' --~; el ~--~ comenta el cierre de comilla añadido
+   por la aplicación.
+3. Repetir la misma URL en el modo corregido.
+
+*** Resultado observado
+
+En el modo vulnerable la respuesta pasó de 1 expediente ("Constructora Delta") a
+*5 expedientes*, incluidos los propiedad de otros perfiles. En el modo corregido la
+misma entrada devolvió *0 filas*: el payload se comparó como texto literal.
+
+#+CAPTION: SQLi exitosa en la versión vulnerable: se listan los cinco expedientes
+[[file:capturas/documento/02_sqli_vulnerable.png]]
+
+#+CAPTION: Misma payload en la versión corregida: sin resultados inesperados
+[[file:capturas/documento/06_sqli_corregido.png]]
+
+*** Corrección
+
+#+begin_src python
+# DESPUÉS (modo seguro): parámetros + validación de longitud
+if len(q) > 80:
+    abort(400)
+filas = conn.execute(
+    "SELECT id, cliente, descripcion, importe FROM expedientes "
+    "WHERE cliente LIKE ?", (f"%{q}%",)
+).fetchall()
+#+end_src
+
+Además se registra =SQLI_DETECTADO= cuando la entrada coincide con un patrón de
+inyección, aunque la consulta parametrizada ya neutralice el efecto.
+
+*** Riesgo e impacto y por qué el control reduce el riesgo
+
+Lectura no autorizada de expedientes, posible modificación si el usuario de base de
+datos tuviera permisos de escritura y exposición de RFC o montos. La parametrización
+separa código de datos: el motor SQLite compila la consulta antes de enlazar el valor,
+por lo que las comillas del atacante no pueden alterar la gramática SQL.
+
+** Actividad 2 y 4. Cross-Site Scripting (CWE-79)
+
+*** Componente y problema
+
+=/comentarios= almacenaba texto del usuario y la plantilla lo insertaba con =|safe=:
+
+#+begin_src html
+<!-- ANTES: Jinja recibe la orden de no escapar -->
+{% if modo == 'vulnerable' %}{{ c.texto|safe }}{% else %}{{ c.texto }}{% endif %}
+#+end_src
+
+*** Procedimiento
+
+1. Iniciar sesión como =s_tio= y publicar
+   =<script>alert('XSS-PROYECTO-FINAL')</script>=.
+2. Recargar =/comentarios= y buscar la etiqueta sin escapar en el HTML.
+3. Repetir en el modo corregido y revisar la cabecera =Content-Security-Policy=.
+
+*** Resultado observado
+
+Antes, el HTML contenía =<script>= literal y el navegador ejecutaba =alert()=.
+Después, el HTML contiene =&lt;script&gt;= y la cabecera CSP es
+=default-src 'self'; script-src 'self'; object-src 'none'; ...=.
+
+#+CAPTION: XSS reflejado en la versión vulnerable
+[[file:capturas/documento/03_xss_vulnerable.png]]
+
+*** Corrección
+
+#+begin_src python
+# La plantilla usa autoescape por defecto en modo seguro: {{ c.texto }}
+# Cabecera añadida en after_request:
+respuesta.headers["Content-Security-Policy"] = (
+    "default-src 'self'; script-src 'self'; object-src 'none'; "
+    "base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+)
+#+end_src
+
+*** Riesgo e impacto y por qué el control reduce el riesgo
+
+Robo de cookie de sesión, acciones suplantadas, phishing dentro del origen legítimo y
+desfiguración. El autoescape convierte caracteres especiales en entidades HTML según
+el contexto; CSP constituye una segunda capa que bloquearía scripts inline aunque se
+filtrara HTML por otra vía.
+
+** Actividad 2 y 4. Control de acceso roto: IDOR/BOLA (CWE-639)
+
+*** Componente y problema
+
+=/expediente/<id>= y =/api/expediente/<id>= buscaban el recurso por identificador y lo
+entregaban sin comparar =owner_id= con el usuario de la sesión.
+
+*** Procedimiento
+
+1. Iniciar sesión como =a_auxiliar=.
+2. Solicitar =/expediente/1=, propiedad de =s_tio=.
+3. Repetir en el modo corregido; verificar además el expediente propio (id 5) y el
+   acceso de =s_tio= al id 1.
+
+*** Resultado observado
+
+| Petición                                   | Vulnerable | Corregido |
+|--------------------------------------------+------------+-----------|
+| =a_auxiliar= → =/expediente/1=               | 200, datos ajenos | 403 |
+| =a_auxiliar= → =/api/expediente/1=           | 200, JSON ajeno   | 403 |
+| =a_auxiliar= → =/expediente/5= (propio)      | 200        | 200 |
+| =s_tio= → =/expediente/1= (socio)            | 200        | 200 |
+
+#+CAPTION: Acceso indebido a un expediente ajeno en la versión vulnerable
+[[file:capturas/documento/04_idor_vulnerable.png]]
+
+#+CAPTION: Denegación 403 en la versión corregida
+[[file:capturas/documento/08_idor_corregido.png]]
+
+*** Corrección
+
+#+begin_src python
+permitido = bool(
+    fila and usuario
+    and (fila["owner_id"] == usuario["id"] or usuario["rol"] == "socio")
+)
+if not permitido:
+    registrar_evento("ACCESO_DENEGADO", "alto", "...", estado=403)
+    abort(403)
+#+end_src
+
+*** Riesgo e impacto y por qué el control reduce el riesgo
+
+Escalada horizontal y vertical, lectura y modificación de expedientes de otros
+clientes, incumplimiento de LFPDPPP y pérdida de trazabilidad. La autorización se
+ejecuta en el servidor para cada objeto y acción, con denegación por defecto; la
+interfaz nunca es la única barrera.
+
+** Actividad 4. Validación consolidada y resultados de OWASP ZAP
+
+#+ATTR_LATEX: :environment tabularx :width \textwidth :align X|X|X|X|X
+| Vulnerabilidad | Prueba repetida | Antes | Después | Veredicto |
+|----------------+-----------------+-------+---------+-----------|
+| SQLi | ~GET /buscar?q=...~ | 5 filas | 0 filas | Corregido |
+| XSS  | Publicar =<script>alert(...)</script>= | Ejecutado | Escapado + CSP | Corregido |
+| IDOR | =a_auxiliar= lee expediente 1 | 200 | 403 | Corregido |
+
+OWASP ZAP 2.17.0 se ejecutó contra el modo vulnerable (spider + escaneo activo) y
+reportó *3 alertas de riesgo alto, 20 medias, 19 bajas y 99 informativas*. Entre las
+altas confirmó =Cross Site Scripting (Persistent)= y =Reflected= en =/comentarios= y
+=SQL Injection= en =/buscar= (respuesta 500 ante ~q='~). El control de acceso roto no
+aparece de forma automática porque requiere sesión y comparación de propiedad; por eso
+se validó manualmente. Los hallazgos se conservan en
+[[file:evidencias/zap/zap_resumen.txt][zap_resumen.txt]], con el detalle estructurado en
+=evidencias/zap/zap_report.json= y el informe HTML en =evidencias/zap/zap_report.html=.
+Estos resultados se usaron como orientación para priorizar las pruebas manuales; la
+confirmación definitiva de cada vulnerabilidad proviene de las peticiones reproducidas.
+
+El mismo escaneo se repitió contra el modo corregido. El resultado fue *0 alertas altas,
+3 medias, 18 bajas y 111 informativas*: desaparecieron SQLi, XSS persistente/reflejado,
+la ausencia de CSP (11) y el cabecero anti-clickjacking (6). Quedan tres alertas medias
+de ausencia de tokens anti-CSRF en =/login= y =/comentarios=, documentadas como riesgo
+pendiente. La comparación completa está en
+[[file:evidencias/texto/06_zap_antes_despues.txt][06_zap_antes_despues.txt]] y el informe
+corregido en [[file:evidencias/zap/secure/zap_resumen.txt][zap_resumen.txt (secure)]].
+ZAP no detectó IDOR/BOLA automáticamente en ninguna de las dos pasadas, por lo que ese
+control se validó únicamente con las pruebas manuales autenticadas.
+
+#+CAPTION: Resumen de hallazgos de OWASP ZAP sobre la aplicación vulnerable
+[[file:capturas/documento/05_zap_hallazgos.png]]
+
+** Actividad 5. Análisis de registros
+
+Se generaron eventos controlados: tres inicios de sesión fallidos, una petición con
+patrón SQLi, un comentario con patrón XSS y dos accesos denegados. La aplicación
+escribe cada evento en =logs/security.jsonl= con timestamp UTC, IP, método, ruta,
+usuario, resultado y severidad. Las reglas de
+[[file:lab/monitoreo/reglas.json][reglas.json]] correlacionan esos eventos y escriben
+alertas en =logs/alertas.jsonl=.
+
+La ejecución produjo alertas para los cuatro tipos esperados: fallos de autenticación,
+accesos no autorizados, patrón XSS y patrón SQLi. El detalle está en
+[[file:evidencias/texto/05_registros_monitoreo.txt][05_registros_monitoreo.txt]].
+
+Estos registros apoyan la detección porque permiten:
+
+- Recononstruir la secuencia de una intrusion antes de que exista una alerta de alto nivel.
+- Diferenciar un error de usuario de un patrón repetido de ataque.
+- Medir la eficacia de los controles: el evento de ataque existe aunque la respuesta
+  sea 403 o la entrada se muestre escapada.
+- Conservar usuario, IP y recurso para la investigación y la notificación.
+
+* Parte B. Fortalecimiento de la organización
+
+** Actividad 7. Selección de la mejora
+
+Se eligió la *Opción B: Monitoreo y detección*, porque el avance dejó como limitación
+explícita que MFA cubría SSH pero no aplicaciones web, y el escenario de ransomware
+mostró que la organización no tenía visibilidad central de eventos de seguridad.
+La mejora es verificable: hay eventos persistidos, reglas con umbrales, alertas
+correlacionadas y un panel consultable.
+
+** Actividad 8. Evaluación de resultados
+
+*** Riesgo que motivó la mejora y situación inicial
+
+El riesgo es la falta de detección temprana de abuso de credenciales y de accesos
+indebidos a expedientes (P × I = 16, Alto en la matriz del avance). Antes de la mejora,
+la aplicación devolvía respuestas HTTP correctas pero no dejaba rastro correlacionable:
+un atacante podía probar credenciales o iterar identificadores sin generar ninguna
+señal para el despacho.
+
+*** Solución implementada
+
+| Componente | Archivo | Función |
+|------------+---------+---------|
+| Registro estructurado | =app/app.py= (=registrar_evento=) | JSONL con hora UTC, IP, usuario, ruta, severidad y resultado |
+| Reglas de correlación | [[file:lab/monitoreo/reglas.json][reglas.json]] | Umbrales por tipo de evento y ventana de 60 s |
+| Alertas | =logs/alertas.jsonl= | Alertas con id, regla, severidad, cantidad y eventos asociados |
+| Panel | =/alertas= y =/api/alertas= | Consulta restringida al rol socio en el modo seguro |
+| Límite de intentos | =before_request= en =/login= | 10 intentos por IP y minuto; evento =RATE_LIMIT= |
+
+#+CAPTION: Panel de monitoreo y detección con alertas correlacionadas
+[[file:capturas/documento/09_alertas_monitoreo.png]]
+
+*** Pruebas y resultados
+
+Se repitieron las pruebas de la Parte A sobre el modo corregido y se añadieron eventos
+de login fallido, SQLi, XSS y acceso denegado. Resultados:
+
+- =LOGIN_FALLIDO=: 3 eventos → alerta =LOGIN-001= (severidad media).
+- =ACCESO_DENEGADO=: 4 eventos → alerta =ACCESO-001= (severidad media).
+- =SQLI_DETECTADO=: eventos de alto nivel → alerta =SQLI-001= (severidad alta).
+- =XSS_DETECTADO=: eventos de alto nivel → alerta =XSS-001= (severidad alta).
+- El panel =/alertas= devolvió 200 para =s_tio= y 403 para =a_auxiliar=.
+
+ Estas cifras corresponden a una ejecución de
+[[file:lab/pruebas/probar.py][probar.py]]; al repetirlo los contadores pueden aumentar,
+pero el veredicto de cada regla se mantiene.
+
+*** Limitaciones y riesgos pendientes
+
+- El registro y el límite de intentos viven en la memoria del proceso: al reiniciar
+  se pierden las ventanas; el JSONL en disco conserva la historia.
+- No hay envío de alertas a un SIEM ni notificación por correo; el panel requiere
+  revisión humana.
+- La IP se toma de =request.remote_addr=; detrás de un proxy habría que confiar solo
+  en =X-Forwarded-For= de proxies conocidos.
+- La detección por patrones puede generar falsos positivos y debe ajustarse con
+  datos reales antes de aplicar bloqueos automáticos.
+- Quedan pendientes MFA para aplicaciones web, HTTPS y filtrado de correo descritos
+  en el avance.
+- No se implementaron tokens anti-CSRF: ZAP los reporta en =/login= y =/comentarios=.
+- La cabecera =Server= de Werkzeug divulga la versión; en producción debe ocultarse
+  mediante un reverse proxy.
+
+* Actividad 9. Respuesta a incidentes
+
+Procedimiento breve para un incidente de ransomware sobre el despacho, relacionado con
+la narrativa de ="Factura pendiente de pago.zip"=.
+
+| Etapa | Acciones | Estado |
+|-------+----------+--------|
+| Detección | Alertas por fallos de login, =SQLI_DETECTADO=, =XSS_DETECTADO= y =ACCESO_DENEGADO=; revisión de =logs/security.jsonl= y del panel =/alertas=. | *Probado* en el laboratorio con eventos controlados |
+| Análisis | Correlacionar IP, usuario, ruta y timestamp; identificar si hay iteración de =/expediente/<id>= o patrones SQLi/XSS. | *Probado* parcialmente: se reconstruyó la secuencia desde los eventos |
+| Contención | Negar el acceso al perfil comprometido, bloquear la IP en el firewall y desmontar el volumen de respaldo. | *Recomendación* probada antes como reglas =nftables= y política de desmontaje; el bloqueo automático desde este prototipo no se implementó |
+| Recuperación | Restaurar expedientes desde el respaldo cifrado verificado con =sha256sum= y reconstruir la base de la aplicación desde =init_db()=. | *Probado* en el avance para archivos; no se ejecutó un borrado real de la base en esta etapa |
+| Verificación | Repetir las tres pruebas de la Parte A, comprobar =sha256sum= de los archivos restaurados y confirmar que no quedan sesiones activas del usuario comprometido. | *Probado* para las tres vulnerabilidades; la verificación de sesiones es recomendación |
+
+Secuencia recomendada: ante un pico de =LOGIN_FALLIDO= o =ACCESO_DENEGADO= se aísla el
+servidor de la red, se conservan los registros, se identifica el alcance con las
+alertas, se restaura desde el último respaldo íntegro y solo se reintegra el servicio
+después de verificar los controles. Las acciones marcadas como recomendación no se
+ejecutaron sobre sistemas productivos porque el laboratorio está aislado.
+
+* Conclusiones
+
+1. Las tres vulnerabilidades exigidas se reprodujeron con peticiones concretas y se
+   corrigieron en la misma base de código: SQLi con consultas parametrizadas, XSS con
+   autoescape y CSP, e IDOR con autorización por objeto.
+2. La repetición de las mismas pruebas demostró el cambio de comportamiento: 5 → 0
+   filas, script ejecutado → escapado y 200 → 403 para el usuario sin permiso.
+3. OWASP ZAP aportó una vista amplia de hallazgos, pero la validación definitiva fue
+   manual y reproducible; se priorizó la evidencia demostrable sobre la cantidad de
+   herramientas.
+4. La mejora de monitoreo cerró una brecha del avance: ahora los intentos de ataque
+   generan eventos y alertas incluso cuando el control defensivo los bloquea.
+5. El procedimiento de respuesta distingue con claridad lo probado de lo recomendado,
+   evitando presentar como implementadas medidas que solo están propuestas.
+6. El riesgo residual sigue siendo relevante: el modo vulnerable debe permanecer
+   aislado, y en producción harían falta HTTPS, MFA en la web, SIEM y revisión
+   periódica de reglas.
+
+* Anexos
+
+** A. Repositorio y comandos de reproducción
+
+El proyecto se entrega como repositorio local en =~/Projects/Ciberseguridad/Proyecto-Final=.
+Para publicarlo, crear el repositorio remoto y añadirlo con =git remote add origin <URL>=;
+no se publican credenciales ni secretos en este entregable.
+
+#+begin_src bash
+cd ~/Projects/Ciberseguridad/Proyecto-Final
+pip install -r app/requirements.txt
+
+LAB_USER_PASSWORD='Laboratorio' lab/run.sh vulnerable 5000 &
+LAB_USER_PASSWORD='Laboratorio' lab/run.sh secure 5001 &
+LAB_PASSWORD='Laboratorio' python3 lab/pruebas/probar.py
+
+lab/zap/scan.sh http://127.0.0.1:5000 evidencias/zap
+lab/zap/scan.sh http://127.0.0.1:5001 evidencias/zap/secure
+scripts/exportar.sh
+#+end_src
+
+** B. Índice de evidencias
+
+| Archivo | Contenido |
+|---------+-----------|
+| [[file:evidencias/texto/01_entorno_endpoints.txt][01_entorno_endpoints.txt]] | Endpoints y estados HTTP en ambos modos |
+| [[file:evidencias/texto/02_sqli_validacion.txt][02_sqli_validacion.txt]] | SQLi antes/después con filas devueltas |
+| [[file:evidencias/texto/03_xss_validacion.txt][03_xss_validacion.txt]] | XSS antes/después y cabecera CSP |
+| [[file:evidencias/texto/04_idor_validacion.txt][04_idor_validacion.txt]] | Matriz de accesos por usuario y modo |
+| [[file:evidencias/texto/05_registros_monitoreo.txt][05_registros_monitoreo.txt]] | Eventos controlados y alertas correlacionadas |
+| [[file:evidencias/texto/06_zap_antes_despues.txt][06_zap_antes_despues.txt]] | Comparación de hallazgos ZAP antes/después |
+| [[file:evidencias/zap/zap_resumen.txt][zap_resumen.txt]] | Resumen de hallazgos de OWASP ZAP (vulnerable) |
+| [[file:evidencias/zap/secure/zap_resumen.txt][zap_resumen.txt (secure)]] | Resumen de hallazgos de OWASP ZAP (corregido) |
+| [[file:capturas/documento/][capturas/documento/]] | Capturas usadas en este informe |
+| [[file:capturas/presentacion/][capturas/presentacion/]] | Capturas preparadas para la presentación ejecutiva |
+
+** C. Consideraciones éticas
+
+- Solo se usaron entornos locales autorizados y datos ficticios.
+- No se publican credenciales, secretos ni información personal real.
+- Se permite el uso de IA como apoyo, con revisión y comprensión de las soluciones.
+- La aplicación vulnerable no debe exponerse fuera del laboratorio.

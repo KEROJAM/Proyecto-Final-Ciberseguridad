@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Inicio{% endblock %}
+{% block content %}
+<section class="hero">
+  <h1>Portal de expedientes del despacho</h1>
+  <p>Aplicación Flask de laboratorio usada para demostrar, corregir y validar
+     SQL Injection, XSS y control de acceso roto (IDOR/BOLA), además de un
+     mecanismo de monitoreo y detección.</p>
+  <p class="note">La organización es ficticia: <strong>Ramírez &amp; Asociados, S.C.</strong>,
+     despacho de contabilidad, nómina y asesoría legal.</p>
+</section>
+
+<section class="card">
+  <h2>Endpoints disponibles</h2>
+  <table>
+    <thead><tr><th>Ruta</th><th>Función</th></tr></thead>
+    <tbody>
+      {% for ruta, descripcion in endpoint %}
+      <tr><td><code>{{ ruta }}</code></td><td>{{ descripcion }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section class="card">
+  <h2>Pruebas rápidas</h2>
+  <ul>
+    <li>SQLi: <code>/buscar?q=Delta' OR '1'='1</code></li>
+    <li>XSS: publicar <code>&lt;script&gt;alert('XSS')&lt;/script&gt;</code> en comentarios</li>
+    <li>IDOR: iniciar sesión como <code>a_auxiliar</code> y abrir <code>/expediente/1</code></li>
+  </ul>
+  <p class="note">Las credenciales se entregan en el entorno de ejecución, nunca en el repositorio.</p>
+</section>
+{% endblock %}

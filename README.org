@@ -1,0 +1,79 @@
+#+TITLE: Proyecto final de Ciberseguridad · Ramírez & Asociados
+#+LANGUAGE: es
+
+* Inicio rápido
+
+Todo se ejecuta en =127.0.0.1= con datos ficticios. No exponer la aplicación a Internet.
+
+#+begin_src bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r app/requirements.txt
+
+# Terminal 1: versión vulnerable
+LAB_USER_PASSWORD='ContraseñaDeLaboratorio' lab/run.sh vulnerable 5000
+
+# Terminal 2: versión corregida + monitoreo
+LAB_USER_PASSWORD='ContraseñaDeLaboratorio' lab/run.sh secure 5001
+
+# Terminal 3: pruebas y evidencias
+LAB_PASSWORD='ContraseñaDeLaboratorio' python3 lab/pruebas/probar.py
+#+end_src
+
+La contraseña y la clave de sesión se pasan por variable de entorno y *no* se guardan en el
+repositorio. Si no se definen, la aplicación genera valores efímeros y los imprime en la
+terminal. Los archivos =app/lab_*.sqlite3= y =logs/= se ignoran en Git.
+
+* Estructura
+
+| Ruta                        | Contenido                                                        |
+|-----------------------------+------------------------------------------------------------------|
+| =app/app.py=                | Aplicación Flask en dos modos (=vulnerable= / =secure=)           |
+| =app/templates/=            | Plantillas Jinja (autoescape solo en el modo seguro)              |
+| =app/static/style.css=      | Estilos de la aplicación                                         |
+| =lab/run.sh=                | Arranque de cada modo con base de datos independiente             |
+| =lab/pruebas/probar.py=     | Pruebas manuales repetibles y generación de evidencias            |
+| =lab/monitoreo/reglas.json= | Reglas de correlación del mecanismo de detección                  |
+| =lab/zap/=                  | Instalación, escaneo e informes de OWASP ZAP                      |
+| =evidencias/texto/=         | Resultados antes/después de cada vulnerabilidad y de los registros|
+| =capturas/documento/=       | Capturas usadas en =INFORME.org=                                  |
+| =capturas/presentacion/=    | Capturas para la presentación ejecutiva (no incluida aquí)        |
+| =scripts/capturar.sh=       | Capturas con =grim= y =slurp=                                     |
+| =scripts/exportar.sh=       | Exportación de =INFORME.org= a =INFORME.pdf=                      |
+| =INFORME.org=               | Informe técnico en formato Org                                    |
+
+* Modo vulnerable
+
+- =GET /buscar?q=...=: concatena el parámetro en la consulta SQL (SQLi).
+- =POST /comentarios= + =GET /comentarios=: marca el contenido como seguro con =|safe= (XSS).
+- =GET /expediente/<id>= y =GET /api/expediente/<id>=: sin verificación de propiedad (IDOR/BOLA).
+
+* Modo corregido
+
+- Consultas =LIKE ?= parametrizadas y validación de longitud.
+- Autoescape de Jinja y cabecera =Content-Security-Policy=.
+- Autorización por =owner_id= o rol =socio=, con denegación por defecto.
+- Registro JSON de eventos, correlación por reglas y panel =/alertas= (Opción B).
+
+* Evidencias
+
+Las evidencias de texto se regeneran con =lab/pruebas/probar.py=. Los informes de ZAP se
+generan con =lab/zap/scan.sh=. Las capturas se toman con =scripts/capturar.sh=; el modo
+interactivo usa =grim -g "$(slurp)"= y el modo automático acepta una geometría explícita.
+
+Las capturas de =capturas/documento/= ilustran el informe (endpoints, tres
+vulnerabilidades antes/después, ZAP y el panel de alertas). Las de
+=capturas/presentacion/= son un subconjunto preparado para la presentación
+ejecutiva, que no se incluye en este entregable.
+
+La comparación ZAP antes/después se regenera con:
+
+#+begin_src bash
+lab/zap/scan.sh http://127.0.0.1:5000 evidencias/zap
+lab/zap/scan.sh http://127.0.0.1:5001 evidencias/zap/secure
+#+end_src
+
+* Seguridad de la entrega
+
+No se publican credenciales, claves, secretos, datos personales reales ni información
+sensible. Todas las personas, clientes, RFC y montos son ficticios. El laboratorio está
+aislado y no requiere servicios en la nube.

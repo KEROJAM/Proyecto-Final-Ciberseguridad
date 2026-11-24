@@ -1,0 +1,30 @@
+========================================================================
+Evidencia generada: 2026-11-24T23:33:54.503944+00:00
+Entorno: laboratorio local autorizado · datos ficticios
+========================================================================
+
+ACTIVIDAD 2/4 · SQL INJECTION
+Payload: q=Delta' OR '1'='1' --
+Endpoint: GET /buscar
+
+[ANTES · modo vulnerable]
+  URL: http://127.0.0.1:5000/buscar?q=Delta%27+OR+%271%27%3D%271%27+--
+  Estado HTTP: 200
+  Filas devueltas: 5 (esperado vulnerable: 5)
+  Fragmento de la respuesta:
+    <td><a href="/expediente/1">1</a></td>
+    <td><a href="/expediente/2">2</a></td>
+    <td><a href="/expediente/3">3</a></td>
+    <td><a href="/expediente/4">4</a></td>
+    <td><a href="/expediente/5">5</a></td>
+
+  Observación: la concatenación de la entrada modifica el WHERE y devuelve
+  todos los expedientes, incluidos los que no coinciden con 'Delta'.
+
+[DESPUÉS · modo corregido]
+  URL: http://127.0.0.1:5001/buscar?q=Delta%27+OR+%271%27%3D%271%27+--
+  Estado HTTP: 200
+  Filas devueltas: 0 (esperado seguro: 0)
+  Mensaje visible: Sin resultados
+  Cambio aplicado: consulta parametrizada con LIKE ? y límite de longitud.
+  Riesgo reducido: el payload se trata como dato, no como código SQL.

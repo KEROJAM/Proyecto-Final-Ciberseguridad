@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Proyecto final de Ciberseguridad</title>
+<style>
+:root{--bg:#f6f8f7;--surface:#fff;--ink:#14231f;--muted:#51625c;--line:#d3ddd9;--accent:#0b6e5c;--accent-soft:#dff0ea;--warn:#8a4b00;--warn-bg:#fff1dc;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1816;--surface:#16231f;--ink:#e6f0ec;--muted:#9fb3ab;--line:#2b3d37;--accent:#4fd1b0;--accent-soft:#183a32;--warn:#ffc77a;--warn-bg:#3a2a12;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f1816;--surface:#16231f;--ink:#e6f0ec;--muted:#9fb3ab;--line:#2b3d37;--accent:#4fd1b0;--accent-soft:#183a32;--warn:#ffc77a;--warn-bg:#3a2a12;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.65 Georgia,"Iowan Old Style",serif}
+h1,h2,h3,nav,.tag,th,.pct{font-family:"Trebuchet MS","Segoe UI",system-ui,sans-serif}
+.wrap{max-width:860px;margin:0 auto;padding:0 20px}
+header{padding:56px 0 28px;border-bottom:3px solid var(--accent)}
+h1{font-size:clamp(2rem,5vw,3rem);line-height:1.1;margin:0 0 10px;letter-spacing:-.02em}
+header p{margin:0;color:var(--muted);font-size:1.1rem}
+nav{position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);border-bottom:1px solid var(--line);padding:10px 0;z-index:5;font-size:.9rem}
+nav .wrap{display:flex;gap:16px;overflow-x:auto;white-space:nowrap}
+nav a{color:var(--accent);text-decoration:none;font-weight:600}
+nav a:hover,nav a:focus-visible{text-decoration:underline}
+section{padding:36px 0 8px}
+h2{font-size:1.7rem;margin:0 0 14px;letter-spacing:-.01em}
+h3{font-size:1.15rem;margin:26px 0 6px}
+p{margin:0 0 14px;max-width:70ch}
+ul,ol{padding-left:22px;margin:0 0 14px}li{margin-bottom:4px}
+.call{background:var(--accent-soft);border-left:4px solid var(--accent);padding:14px 18px;margin:18px 0;border-radius:0 6px 6px 0}
+.warn{background:var(--warn-bg);color:var(--warn);border-left-color:var(--warn)}
+.split{display:grid;grid-template-columns:3fr 2fr;gap:14px;margin:18px 0}
+@media(max-width:640px){.split{grid-template-columns:1fr}}
+.part{border:2px solid var(--accent);border-radius:8px;padding:16px 18px;background:var(--surface)}
+.part .pct{font-size:2.2rem;font-weight:700;color:var(--accent);line-height:1}
+.act{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 20px 14px;margin:16px 0}
+.tag{display:inline-block;background:var(--accent);color:#fff;font-size:.8rem;padding:2px 10px;border-radius:99px;margin-right:6px}
+.ev{color:var(--muted);font-size:.95rem}
+.opt{margin:0 0 10px}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;background:var(--surface);font-size:.95rem}
+th,td{border:1px solid var(--line);padding:8px 12px;text-align:left}
+td:last-child,th:last-child{text-align:right}
+tfoot td{font-weight:700;background:var(--accent-soft)}
+th{background:var(--accent-soft)}
+footer{padding:30px 0 50px;color:var(--muted);font-size:.9rem}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+<h1>Proyecto final de Ciberseguridad</h1>
+<p>Seguridad de aplicaciones, implementación de controles y respuesta a incidentes</p>
+</div></header>
+<nav><div class="wrap">
+<a href="#intro">Introducción</a><a href="#objetivo">Objetivo y estructura</a><a href="#parte-a">Parte A</a><a href="#parte-b">Parte B</a><a href="#entregables">Entregables</a><a href="#rubrica">Rúbrica</a><a href="#consideraciones">Consideraciones</a>
+</div></nav>
+<main class="wrap">
+
+<section id="intro">
+<h2>Introducción</h2>
+<p>Durante el avance del proyecto, cada equipo seleccionó una organización y desarrolló un diagnóstico inicial de sus necesidades de ciberseguridad. En esa primera etapa trabajaron cinco áreas:</p>
+<ol>
+<li><strong>Análisis de riesgos:</strong> identificación de activos críticos, amenazas, vulnerabilidades y consecuencias de un incidente de ransomware.</li>
+<li><strong>Evaluación técnica:</strong> uso de Nmap, Wireshark y GoPhish para identificar riesgos de red, analizar tráfico y simular ingeniería social.</li>
+<li><strong>Gestión de accesos:</strong> definición de perfiles, configuración de permisos y validación de accesos permitidos y denegados.</li>
+<li><strong>Protección y recuperación de datos:</strong> cifrado, respaldos y pruebas de restauración.</li>
+<li><strong>Diseño de infraestructura segura:</strong> propuestas de segmentación, firewalls y otros controles de protección.</li>
+</ol>
+<p>Algunos controles fueron implementados y validados en laboratorio; otros se documentaron como propuestas para la organización.</p>
+<h3>¿Qué sigue ahora?</h3>
+<p>Hasta ahora el proyecto se concentró en identificar riesgos y proteger la infraestructura y la información. Sin embargo, las organizaciones también dependen de aplicaciones web y APIs para consultar, almacenar y procesar datos. Una aplicación vulnerable puede comprometer la información incluso cuando existen controles de seguridad en la infraestructura.</p>
+<div class="call"><strong>En esta segunda etapa deberán evaluar vulnerabilidades de aplicaciones, implementar soluciones y demostrar cómo fortalecerían la seguridad de su organización.</strong></div>
+</section>
+
+<section id="objetivo">
+<h2>Objetivo y estructura</h2>
+<p>Evaluar vulnerabilidades comunes de aplicaciones web, implementar y validar medidas de protección, y desarrollar una mejora técnica que fortalezca la seguridad de la organización seleccionada en el avance.</p>
+<div class="split">
+<div class="part"><div class="pct">60%</div><h3 style="margin-top:8px">Parte A. Práctica técnica común</h3><p style="margin:0">Todos los equipos trabajan con una aplicación de laboratorio en Python y Flask. Deben identificar, demostrar y corregir tres vulnerabilidades obligatorias: SQL Injection, Cross-Site Scripting (XSS) y control de acceso roto (IDOR/BOLA).</p></div>
+<div class="part"><div class="pct">40%</div><h3 style="margin-top:8px">Parte B. Mejora específica</h3><p style="margin:0">Cada equipo retoma el proyecto de su organización y desarrolla una mejora de seguridad relacionada con los riesgos identificados en el avance.</p></div>
+</div>
+</section>
+
+<section id="parte-a">
+<h2>Parte A. Evaluación y protección de una aplicación web</h2>
+
+<div class="act"><h3><span class="tag">Actividad 1</span>Preparación del entorno</h3>
+<ol><li>Preparar un entorno local de laboratorio con Python y Flask.</li><li>Ejecutar la aplicación proporcionada para la actividad.</li><li>Verificar que los servicios y endpoints funcionen.</li><li>Configurar OWASP ZAP para analizar la aplicación.</li></ol>
+<p class="ev"><strong>Evidencias:</strong> aplicación funcionando, endpoints disponibles y herramienta de análisis configurada.</p></div>
+
+<div class="act"><h3><span class="tag">Actividad 2</span>Identificación de vulnerabilidades</h3>
+<p>Analicen las siguientes vulnerabilidades en la aplicación:</p>
+<ul>
+<li><strong>SQL Injection:</strong> demuestren cómo una entrada no validada puede modificar el comportamiento de una consulta a la base de datos.</li>
+<li><strong>Cross-Site Scripting (XSS):</strong> demuestren cómo el manejo incorrecto de contenido proporcionado por usuarios puede permitir la ejecución de JavaScript no confiable en el navegador.</li>
+<li><strong>Control de acceso roto (IDOR/BOLA):</strong> demuestren cómo un usuario puede acceder a información de otro usuario cuando la aplicación no verifica adecuadamente los permisos sobre los recursos solicitados.</li>
+</ul>
+<p>Utilicen OWASP ZAP y las pruebas manuales necesarias. Para cada vulnerabilidad documenten:</p>
+<ul><li>Componente o endpoint afectado.</li><li>Descripción del problema.</li><li>Procedimiento de prueba.</li><li>Resultado observado.</li><li>Riesgo e impacto potencial.</li></ul>
+<div class="call warn">Todas las pruebas deberán realizarse exclusivamente sobre la aplicación de laboratorio.</div></div>
+
+<div class="act"><h3><span class="tag">Actividad 3</span>Implementación de soluciones</h3>
+<p>Corrijan las tres vulnerabilidades identificadas. Las soluciones deberán incluir, según corresponda:</p>
+<ul><li>Consultas SQL parametrizadas.</li><li>Tratamiento seguro y escapado de contenido presentado en el navegador.</li><li>Validaciones de autorización sobre los recursos solicitados.</li></ul>
+<div class="call"><strong>No es suficiente explicar cómo se solucionaría una vulnerabilidad: deberán implementar la corrección.</strong></div></div>
+
+<div class="act"><h3><span class="tag">Actividad 4</span>Validación de las soluciones</h3>
+<p>Repitan las pruebas realizadas antes de aplicar las correcciones. Para cada vulnerabilidad presenten:</p>
+<ol><li>Resultado de la aplicación vulnerable.</li><li>Código o configuración modificada.</li><li>Resultado después de aplicar la solución.</li><li>Explicación de por qué el control reduce el riesgo.</li></ol>
+<p>Incluyan los resultados relevantes de OWASP ZAP y de las pruebas manuales.</p></div>
+
+<div class="act"><h3><span class="tag">Actividad 5</span>Análisis de registros</h3>
+<p>Generen eventos controlados, como solicitudes inválidas o intentos de acceso no autorizado. Revisen los registros disponibles e identifiquen los eventos generados. Expliquen cómo estos registros pueden apoyar la detección y el análisis de incidentes.</p></div>
+</section>
+
+<section id="parte-b">
+<h2>Parte B. Fortalecimiento de la organización</h2>
+
+<div class="act"><h3><span class="tag">Actividad 6</span>Recuperación del contexto</h3>
+<p>Retomen la organización y el escenario de ransomware del avance. Resuman:</p>
+<ul><li>Actividad e industria de la organización.</li><li>Servicios y datos críticos.</li><li>Riesgos principales identificados.</li><li>Controles previamente implementados.</li><li>Medidas que quedaron como propuestas.</li></ul></div>
+
+<div class="act"><h3><span class="tag">Actividad 7</span>Implementación de una mejora</h3>
+<p>Seleccionen una de las siguientes alternativas:</p>
+<p class="opt"><strong>Opción A. Seguridad de red.</strong> Implementen reglas de firewall y comprueben su funcionamiento mediante pruebas de conectividad o escaneos autorizados.</p>
+<p class="opt"><strong>Opción B. Monitoreo y detección.</strong> Implementen un mecanismo de registro o monitoreo que permita identificar eventos de seguridad y analizar su importancia.</p>
+<p class="opt"><strong>Opción C. Recuperación ante incidentes.</strong> Amplíen su estrategia de respaldos y recuperación, incorporando nuevas verificaciones de integridad, automatización o pruebas de recuperación.</p>
+<p class="opt"><strong>Opción D. Autenticación y control de acceso.</strong> Fortalezcan un mecanismo de autenticación o autorización, implementando controles adicionales y validando su funcionamiento.</p>
+<div class="call">La mejora deberá representar un avance verificable respecto de lo desarrollado anteriormente.</div></div>
+
+<div class="act"><h3><span class="tag">Actividad 8</span>Evaluación de resultados</h3>
+<p>Documenten:</p>
+<ul><li>Riesgo que motivó la mejora.</li><li>Situación inicial.</li><li>Solución implementada.</li><li>Pruebas realizadas.</li><li>Resultados obtenidos.</li><li>Limitaciones y riesgos pendientes.</li></ul></div>
+
+<div class="act"><h3><span class="tag">Actividad 9</span>Respuesta a incidentes</h3>
+<p>Elaboren un procedimiento breve de respuesta para un incidente relacionado con su organización. Incluyan las etapas de detección, análisis, contención, recuperación y verificación.</p>
+<p>Relacionen el procedimiento con el escenario de ransomware y distingan las acciones probadas de las recomendaciones que no fueron implementadas.</p></div>
+</section>
+
+<section id="entregables">
+<h2>Entregables</h2>
+<div class="act"><h3>Entregable 1. Informe técnico en PDF</h3><p>Debe integrar el contexto de la organización, las tres vulnerabilidades evaluadas, sus correcciones, las evidencias de validación, la mejora específica y las conclusiones.</p></div>
+<div class="act"><h3>Entregable 2. Repositorio de GitHub</h3><p>Debe contener el código, configuraciones, instrucciones de ejecución y archivos desarrollados durante el proyecto.</p>
+<div class="call warn">No publiquen credenciales, secretos, datos personales ni información sensible.</div></div>
+<div class="act"><h3>Entregable 3. Presentación ejecutiva</h3><p>Debe comunicar los resultados del proyecto desde una perspectiva corporativa, conforme a la estructura indicada en el Diseño 2.</p></div>
+</section>
+
+<section id="rubrica">
+<h2>Rúbrica de evaluación</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Criterio</th><th>Valor</th></tr></thead>
+<tbody>
+<tr><td>Preparación y ejecución de la aplicación</td><td>5%</td></tr>
+<tr><td>Identificación de SQL Injection, XSS e IDOR/BOLA</td><td>15%</td></tr>
+<tr><td>Implementación de las tres correcciones</td><td>25%</td></tr>
+<tr><td>Validación, registros y evidencias</td><td>15%</td></tr>
+<tr><td>Justificación de la mejora organizacional</td><td>10%</td></tr>
+<tr><td>Implementación y pruebas de la mejora</td><td>20%</td></tr>
+<tr><td>Respuesta a incidentes y conclusiones</td><td>5%</td></tr>
+<tr><td>Calidad de documentación y comunicación</td><td>5%</td></tr>
+</tbody>
+<tfoot><tr><td>Total</td><td>100%</td></tr></tfoot>
+</table></div>
+</section>
+
+<section id="consideraciones">
+<h2>Consideraciones</h2>
+<ul>
+<li>Utilicen únicamente datos ficticios y entornos de laboratorio autorizados.</li>
+<li>No es necesario contratar servicios de nube.</li>
+<li>No se exige una infraestructura empresarial completa.</li>
+<li>Pueden utilizar Windows, macOS o Linux.</li>
+<li>Se permite utilizar herramientas de inteligencia artificial como apoyo, siempre que comprendan y puedan explicar las soluciones.</li>
+<li>Se evaluarán los resultados demostrables, no la cantidad de herramientas utilizadas.</li>
+</ul>
+</section>
+</main>
+<footer><div class="wrap">Proyecto final de Ciberseguridad</div></footer>
+</body>
+</html>

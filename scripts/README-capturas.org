@@ -1,0 +1,53 @@
+#+title: Capturas de pantalla (Wayland / dwl)
+#+options: toc:nil
+
+Entorno: =WAYLAND_DISPLAY=wayland-0=, =DISPLAY=:0= (Xwayland), =grim= + =slurp=.
+
+* Uso interactivo (persona)
+
+#+begin_src sh
+scripts/capturar.sh capturas/documento/ejemplo.png
+#+end_src
+
+El script invoca =slurp= en realidad: mueve el ratón, arrastra con el botón
+izquierdo para elegir la región y suelta; =Esc= cancela. La geometría que imprime
+slurp (=$x,$y WxH$=) se pasa a =grim -g=. El modo usado se escribe en stderr.
+
+* Automatización (sin selección interactiva)
+
+#+begin_src sh
+# Geometría como 2º argumento (acepta "x,y WxH" y "x,y W H")
+scripts/capturar.sh capturas/presentacion/diapositiva.png '100,100 800x600'
+
+# Lo mismo con variables de entorno
+SLURP_GEOMETRY='100,100 800x600' scripts/capturar.sh capturas/documento/ejemplo.png
+SLURP_REGION='100,100 800x600'   scripts/capturar.sh capturas/documento/ejemplo.png
+
+# Capturar un output concreto (wlr-randr lista los nombres; aquí "eDP-1")
+SLURP_OUTPUT=eDP-1 scripts/capturar.sh capturas/presentacion/completa.png
+#+end_src
+
+Sin geometría ni =SLURP_OUTPUT=, el script intenta =slurp= durante 2 s
+(variable CAPTURAR_SLURP_TIMEOUT=0 para desactivar el timeout) y si no hay selección captura el
+escritorio completo con =grim=, indicando el modo en stderr. El directorio
+destino se crea automáticamente y se valida que el PNG existe y tiene cabecera
+válida.
+
+* ¿Se puede automatizar slurp con XTest/Xwayland?
+
+*No en este entorno.* Prueba realizada con un helper C en
+=/tmp/opencode/xtest_drag.c= (XTestFakeMotionEvent + XTestFakeButtonEvent):
+
+- XTest sí funciona dentro de Xwayland: =XQueryPointer= pasó de =(700,600)= a
+  =(500,400)= tras =XTestFakeMotionEvent(500,400)=.
+- Pero el arrastre inyectado por XTest no llegó a =slurp=, que es cliente
+  Wayland puro y depende del seat del compositor: terminó por timeout sin
+  imprimir geometría.
+- Con una ventana X11 visible (=QT_QPA_PLATFORM=xcb qutebrowser=), =slurp=
+  además terminó con =SIGSEGV= en este dwl/wlroots, así que tampoco es fiable
+  para automatización.
+- No hay =ydotool=/=wtype=/=uinput= accesible ni sudo sin contraseña, así que
+  no se puede inyectar entrada Wayland real.
+
+Por tanto, la automatización debe usar las opciones anteriores; la selección
+con =slurp= queda reservada a una persona.

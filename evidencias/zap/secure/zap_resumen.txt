@@ -1,0 +1,182 @@
+Resumen de escaneo OWASP ZAP
+========================================
+Fecha (UTC) : 2026-11-24 23:40:41
+Objetivo    : http://127.0.0.1:5001
+Versión ZAP : 2.17.0
+Informes    : zap_reporte.json (OK), zap_reporte.html (OK)
+
+Alertas agrupadas por riskcode
+----------------------------------------
+[2] Medium: 3 alerta(s)
+  * Absence of Anti-CSRF Tokens (3) [pluginId=10202]
+      - http://127.0.0.1:5001/login
+      - http://127.0.0.1:5001/login
+      - http://127.0.0.1:5001/comentarios
+      Evidencia: <form method="post">
+
+[1] Low: 18 alerta(s)
+  * Server Leaks Version Information via "Server" HTTP Response Header Field (18) [pluginId=10036]
+      - http://127.0.0.1:5001/static/style.css
+      - http://127.0.0.1:5001/expediente/4
+      - http://127.0.0.1:5001/expediente/2
+      - http://127.0.0.1:5001/comentarios
+      - http://127.0.0.1:5001/expediente/3
+      - http://127.0.0.1:5001/alertas
+      - http://127.0.0.1:5001/expediente/1
+      - http://127.0.0.1:5001/expediente/5
+      - http://127.0.0.1:5001/script
+      - http://127.0.0.1:5001/sitemap.xml
+      - http://127.0.0.1:5001/robots.txt
+      - http://127.0.0.1:5001/login
+      - http://127.0.0.1:5001/buscar?q=ZAP
+      - http://127.0.0.1:5001/buscar
+      - http://127.0.0.1:5001/login
+      - http://127.0.0.1:5001/
+      - http://127.0.0.1:5001
+      - http://127.0.0.1:5001/comentarios
+      Evidencia: Werkzeug/3.1.9 Python/3.14.10
+
+[0] Informational: 111 alerta(s)
+  * Authentication Request Identified (1) [pluginId=10111]
+      - http://127.0.0.1:5001/login
+      Parámetro: username
+      Evidencia: password
+  * User Agent Fuzzer (108) [pluginId=10104]
+      - http://127.0.0.1:5001/login
+      - http://127.0.0.1:5001/alertas
+      - http://127.0.0.1:5001/login
+      - http://127.0.0.1:5001/comentarios
+      - http://127.0.0.1:5001/expediente/1
+      - http://127.0.0.1:5001/expediente/2
+      - http://127.0.0.1:5001/expediente/3
+      - http://127.0.0.1:5001/expediente/5
+      - http://127.0.0.1:5001/login
+      - http://127.0.0.1:5001/alertas
+      - http://127.0.0.1:5001/comentarios
+      - http://127.0.0.1:5001/expediente/4
+      - http://127.0.0.1:5001/comentarios
+      - http://127.0.0.1:5001/login
+      - http://127.0.0.1:5001/expediente/1
+      - http://127.0.0.1:5001/expediente/2
+      - http://127.0.0.1:5001/expediente/3
+      - http://127.0.0.1:5001/expediente/5
+      - http://127.0.0.1:5001/alertas
+      - http://127.0.0.1:5001/login
+      - http://127.0.0.1:5001/expediente/4
+      - http://127.0.0.1:5001/comentarios
+      - http://127.0.0.1:5001/expediente/1
+      - http://127.0.0.1:5001/expediente/2
+      - http://127.0.0.1:5001/login
+      - http://127.0.0.1:5001/expediente/5
+      - http://127.0.0.1:5001/comentarios
+      - http://127.0.0.1:5001/expediente/3
+      - http://127.0.0.1:5001/alertas
+      - http://127.0.0.1:5001/comentarios
+      - http://127.0.0.1:5001/expediente/4
+      - http://127.0.0.1:5001/login
+      - http://127.0.0.1:5001/expediente/1
+      - http://127.0.0.1:5001/expediente/2
+      - http://127.0.0.1:5001/expediente/5
+      - http://127.0.0.1:5001/expediente/3
+      - http://127.0.0.1:5001/login
+      - http://127.0.0.1:5001/comentarios
+      - http://127.0.0.1:5001/alertas
+      - http://127.0.0.1:5001/expediente/4
+      - http://127.0.0.1:5001/login
+      - http://127.0.0.1:5001/comentarios
+      - http://127.0.0.1:5001/expediente/2
+      - http://127.0.0.1:5001/expediente/1
+      - http://127.0.0.1:5001/expediente/5
+      - http://127.0.0.1:5001/comentarios
+      - http://127.0.0.1:5001/expediente/3
+      - http://127.0.0.1:5001/login
+      - http://127.0.0.1:5001/alertas
+      - http://127.0.0.1:5001/expediente/4
+      - http://127.0.0.1:5001/login
+      - http://127.0.0.1:5001/expediente/2
+      - http://127.0.0.1:5001/expediente/1
+      - http://127.0.0.1:5001/expediente/5
+      - http://127.0.0.1:5001/comentarios
+      - http://127.0.0.1:5001/expediente/3
+      - http://127.0.0.1:5001/alertas
+      - http://127.0.0.1:5001/login
+      - http://127.0.0.1:5001/expediente/4
+      - http://127.0.0.1:5001/comentarios
+      - http://127.0.0.1:5001/expediente/1
+      - http://127.0.0.1:5001/expediente/2
+      - http://127.0.0.1:5001/expediente/5
+      - http://127.0.0.1:5001/expediente/3
+      - http://127.0.0.1:5001/alertas
+      - http://127.0.0.1:5001/expediente/4
+      - http://127.0.0.1:5001/expediente/2
+      - http://127.0.0.1:5001/expediente/1
+      - http://127.0.0.1:5001/comentarios
+      - http://127.0.0.1:5001/expediente/5
+      - http://127.0.0.1:5001/expediente/3
+      - http://127.0.0.1:5001/alertas
+      - http://127.0.0.1:5001/expediente/4
+      - http://127.0.0.1:5001/expediente/2
+      - http://127.0.0.1:5001/expediente/1
+      - http://127.0.0.1:5001/comentarios
+      - http://127.0.0.1:5001/expediente/5
+      - http://127.0.0.1:5001/comentarios
+      - http://127.0.0.1:5001/expediente/3
+      - http://127.0.0.1:5001/expediente/4
+      - http://127.0.0.1:5001/alertas
+      - http://127.0.0.1:5001/expediente/2
+      - http://127.0.0.1:5001/expediente/1
+      - http://127.0.0.1:5001/expediente/3
+      - http://127.0.0.1:5001/comentarios
+      - http://127.0.0.1:5001/expediente/4
+      - http://127.0.0.1:5001/alertas
+      - http://127.0.0.1:5001/expediente/5
+      - http://127.0.0.1:5001/expediente/2
+      - http://127.0.0.1:5001/expediente/1
+      - http://127.0.0.1:5001/expediente/3
+      - http://127.0.0.1:5001/expediente/4
+      - http://127.0.0.1:5001/alertas
+      - http://127.0.0.1:5001/comentarios
+      - http://127.0.0.1:5001/expediente/5
+      - http://127.0.0.1:5001/comentarios
+      - http://127.0.0.1:5001/expediente/2
+      - http://127.0.0.1:5001/expediente/1
+      - http://127.0.0.1:5001/expediente/3
+      - http://127.0.0.1:5001/expediente/4
+      - http://127.0.0.1:5001/expediente/5
+      - http://127.0.0.1:5001/comentarios
+      - http://127.0.0.1:5001/comentarios
+      - http://127.0.0.1:5001/comentarios
+      - http://127.0.0.1:5001/comentarios
+      - http://127.0.0.1:5001/comentarios
+      - http://127.0.0.1:5001/comentarios
+      - http://127.0.0.1:5001/comentarios
+      Parámetro: Header User-Agent
+  * User Controllable HTML Element Attribute (Potential XSS) (2) [pluginId=10031]
+      - http://127.0.0.1:5001/buscar?q=ZAP
+      - http://127.0.0.1:5001/buscar?q=Delta
+      Parámetro: q
+
+Sitios descubiertos
+----------------------------------------
+  - http://127.0.0.1:5001
+
+URLs descubiertas
+----------------------------------------
+  - http://127.0.0.1:5001
+  - http://127.0.0.1:5001/
+  - http://127.0.0.1:5001/alertas
+  - http://127.0.0.1:5001/buscar
+  - http://127.0.0.1:5001/buscar?q=ZAP
+  - http://127.0.0.1:5001/comentarios
+  - http://127.0.0.1:5001/expediente
+  - http://127.0.0.1:5001/expediente/1
+  - http://127.0.0.1:5001/expediente/2
+  - http://127.0.0.1:5001/expediente/3
+  - http://127.0.0.1:5001/expediente/4
+  - http://127.0.0.1:5001/expediente/5
+  - http://127.0.0.1:5001/login
+  - http://127.0.0.1:5001/robots.txt
+  - http://127.0.0.1:5001/script
+  - http://127.0.0.1:5001/sitemap.xml
+  - http://127.0.0.1:5001/static
+  - http://127.0.0.1:5001/static/style.css

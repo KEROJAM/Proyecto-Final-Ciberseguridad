@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Monitoreo y alertas{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>Monitoreo y detección</h1>
+  <p>Eventos de seguridad generados por la aplicación y correlacionados con reglas de
+     <code>lab/monitoreo/reglas.json</code>. Vista restringida al perfil socio en el modo corregido.</p>
+  <div class="metrics">
+    <div><strong>{{ alertas|length }}</strong><span>alertas activas</span></div>
+    <div><strong>{{ eventos|length }}</strong><span>eventos en memoria</span></div>
+    <div><strong>{{ total_comentarios }}</strong><span>comentarios almacenados</span></div>
+  </div>
+</section>
+
+<section class="card">
+  <h2>Alertas correlacionadas</h2>
+  <table>
+    <thead><tr><th>ID</th><th>Regla</th><th>Severidad</th><th>Eventos</th><th>Fin</th></tr></thead>
+    <tbody>
+      {% for a in alertas %}
+      <tr>
+        <td>{{ a.id }}</td>
+        <td>{{ a.titulo }}</td>
+        <td><span class="badge {{ a.severidad }}">{{ a.severidad }}</span></td>
+        <td>{{ a.cantidad }}/{{ a.umbral }}</td>
+        <td>{{ a.fin[11:19] }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5">Sin alertas en la ventana actual.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section class="card">
+  <h2>Eventos recientes</h2>
+  <table>
+    <thead><tr><th>Hora (UTC)</th><th>Tipo</th><th>Severidad</th><th>Usuario</th><th>Ruta</th><th>IP</th></tr></thead>
+    <tbody>
+      {% for e in eventos %}
+      <tr>
+        <td>{{ e.timestamp[11:19] }}</td>
+        <td>{{ e.tipo }}</td>
+        <td><span class="badge {{ e.severidad }}">{{ e.severidad }}</span></td>
+        <td>{{ e.usuario }}</td>
+        <td><code>{{ e.ruta }}</code></td>
+        <td>{{ e.ip }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6">Sin eventos registrados todavía.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

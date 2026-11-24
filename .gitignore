@@ -1,0 +1,21 @@
+# Base de datos y secretos de laboratorio
+app/lab.sqlite3
+*.db
+*.sqlite3
+.env
+*.key
+.secret_key
+
+# Registros generados en ejecución
+logs/
+__pycache__/
+*.pyc
+
+# Intermedios de LaTeX
+*.aux
+*.out
+*.toc
+*.log
+
+# Descargas grandes de herramientas
+tools/zap/

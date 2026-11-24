@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Comentarios{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>Comentarios del despacho</h1>
+  {% if modo == 'vulnerable' %}
+  <p class="warn">El contenido se marca como seguro con <code>|safe</code>: se ejecuta el HTML/JavaScript enviado.</p>
+  {% else %}
+  <p class="ok">Autoescape de Jinja + CSP: el contenido se muestra como texto, nunca se ejecuta.</p>
+  {% endif %}
+  <form method="post">
+    <label>Nuevo comentario
+      <textarea name="texto" rows="3" placeholder="Escriba un comentario"></textarea>
+    </label>
+    <button type="submit">Publicar</button>
+  </form>
+  <h2>Publicaciones recientes</h2>
+  <div class="comments">
+    {% for c in comentarios %}
+    <article class="comment">
+      <header><strong>{{ c.usuario }}</strong> <time>{{ c.creado }}</time></header>
+      <div class="body">
+        {% if modo == 'vulnerable' %}
+          {{ c.texto|safe }}
+        {% else %}
+          {{ c.texto }}
+        {% endif %}
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

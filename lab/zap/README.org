@@ -1,0 +1,64 @@
+#+title: OWASP ZAP local (instalación + escaneo)
+#+startup: showall
+
+* Versión instalada
+
+- OWASP ZAP *2.17.0* (release estable, publicado 2025-12-15; último =latest= consultado en la API de GitHub el 2026-11-24).
+- Artefacto: =ZAP_2.17.0_Linux.tar.gz=, SHA-256 =efe799aaa3627db683b43f00c9c210aea0b75c00cc8f0a0f0434d12bb3ddde5a= (verificado en la descarga).
+- Java: OpenJDK *27.0.1.1* (=/usr/sbin/java=). =zap.sh -version= devuelve =2.17.0=. Aparece un aviso no fatal de =sun.misc.Unsafe= (Netty) propio de Java 27.
+- El binario (~244 MB comprimidos) se instala fuera del repo, en =~/.local/zap/ZAP_2.17.0/zap.sh=, para no versionar cientos de MB. En =lab/zap/= solo hay scripts.
+
+* Instalación (idempotente)
+
+#+begin_src sh
+./lab/zap/instalar_zap.sh
+~/.local/zap/ZAP_2.17.0/zap.sh -version
+#+end_src
+
+Si ya existe la versión correcta no vuelve a descargar. Variables opcionales: =ZAP_VERSION=, =ZAP_SHA256=, =ZAP_URL=, =ZAP_INSTALL_DIR=, =ZAP_SH=.
+
+* Escaneo
+
+App vulnerable (arrancada previamente en el puerto 5000):
+
+#+begin_src sh
+./lab/zap/scan.sh http://127.0.0.1:5000 /tmp/opencode/zap_app
+#+end_src
+
+Sin argumentos: objetivo =http://127.0.0.1:5000= y salida =lab/zap/salida=.
+Uso: =./lab/zap/scan.sh [URL_BASE] [OUTPUT_DIR]= (=--help= muestra la ayuda).
+
+El script arranca ZAP en daemon enlazado a =127.0.0.1= en un puerto libre, con una *API key aleatoria por ejecución* (guardada solo en un temporal con permisos 600 y borrada al terminar; nunca se imprime ni se escribe en los informes), espera a que la API responda, siembra la URL, fija el alcance, ejecuta spider + passive scan + active scan y exporta los resultados. El daemon se detiene siempre al salir (trap).
+
+Archivos generados en =OUTPUT_DIR=:
+
+- =zap_reporte.json= y =zap_reporte.html= (plantillas =traditional-json= / =traditional-html=; fallback a los endpoints =OTHER/core/other/jsonreport= y =htmlreport=).
+- =zap_resumen.txt=: alertas agrupadas por =riskcode= (3 High, 2 Medium, 1 Low, 0 Informational), con URL/decisión/evidencia y listado de sitios y URLs.
+- =zap_alertas.json= (alertas crudas), =zap_urls.txt=, =scan.log= y =zap_daemon.log=.
+
+Variables de ajuste:
+
+- =ZAP_SH=: ruta explícita a =zap.sh=.
+- =ZAP_PORT=: puerto fijo de la API (por defecto se elige uno libre).
+- =ZAP_SPIDER_TIMEOUT= (300 s), =ZAP_ASCAN_TIMEOUT= (900 s), =ZAP_PSCAN_TIMEOUT= (180 s): si se agotan, se detiene el escaneo y se entregan informes parciales con aviso en =scan.log=.
+
+* Prueba realizada
+
+Servidor estático propio =python3 -m http.server 9999 --bind 127.0.0.1= con una página y un formulario:
+
+#+begin_src sh
+ZAP_SPIDER_TIMEOUT=40 ZAP_ASCAN_TIMEOUT=60 ZAP_PSCAN_TIMEOUT=20 \
+  ./lab/zap/scan.sh http://127.0.0.1:9999 /tmp/opencode/zap_test_out
+#+end_src
+
+Resultado: ZAP arrancó, completó spider y active scan y generó los tres archivos anteriores; 17 alertas (Medium=7, Low=7, Informational=3). No se escaneó la aplicación Flask.
+
+* Limitaciones
+
+- No hay escaneo autenticado: no se configuran login, sesión ni CSRF tokens. La app debe permitir acceso anónimo o ampliarse el script.
+- No se ejecuta Ajax Spider; páginas muy dependientes de JavaScript pueden quedar poco cubiertas.
+- El active scan envía peticiones potencialmente modificadoras (formularios, parámetros). Ejecutar solo contra una instancia descartable de la app vulnerable.
+- El alcance es la URL base y su subárbol. Otros hosts no se escanean.
+- El servidor objetivo debe estar arriba antes de lanzar el script; si no, ZAP informará pocas o ninguna alerta.
+- El daemon escucha solo en loopback; no se expone la API a la red.
+- El informe HTML/JSON se basa en las plantillas disponibles en esta versión; si cambian, el script elige dinámicamente una alternativa o usa los endpoints heredados.

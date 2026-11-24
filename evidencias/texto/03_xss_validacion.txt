@@ -1,0 +1,22 @@
+========================================================================
+Evidencia generada: 2026-11-24T23:33:54.665072+00:00
+Entorno: laboratorio local autorizado · datos ficticios
+========================================================================
+
+ACTIVIDAD 2/4 · CROSS-SITE SCRIPTING (XSS)
+Payload publicado: <script>alert('XSS-PROYECTO-FINAL')</script>
+Endpoint: POST/GET /comentarios
+
+[ANTES · modo vulnerable]
+  GET /comentarios -> 200
+  Script sin escapar presente en el HTML: True
+  Fragmento:           <script>alert('XSS-PROYECTO-FINAL')</script>
+  Observación: el navegador interpreta la etiqueta como JavaScript.
+
+[DESPUÉS · modo corregido]
+  GET /comentarios -> 200
+  Script sin escapar presente en el HTML: False
+  Contenido escapado (&lt;script&gt;) presente: True
+  Cabecera CSP: default-src 'self'; script-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'
+  Cambio aplicado: autoescape de Jinja en la plantilla + CSP restrictiva.
+  Riesgo reducido: el contenido se representa como texto inerte.
