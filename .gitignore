@@ -19,3 +19,7 @@ __pycache__/
 
 # Descargas grandes de herramientas
 tools/zap/
+
+# Generados por scripts/exportar.sh
+INFORME.tex
+INFORME_v2.pdf

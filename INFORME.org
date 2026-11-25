@@ -1,13 +1,14 @@
 #+TITLE: Informe técnico · Proyecto final de Ciberseguridad
 #+DATE: 24 11 2026
-#+AUTHOR: Jahil Majorek Casas Sánchez
+#+AUTHOR: Jahil Majorek Casas Sánchez y Hugo David Ruiz Moreno
 #+LANGUAGE: es
 #+LATEX_CLASS: article
 #+latex_class_options: [letterpaper]
 #+LATEX_HEADER: \input{~/Documents/Clases/sample.tex}
 #+LATEX_HEADER: \renewcommand{\certificado}{CiberSeguridad}
-#+LATEX_HEADER: \renewcommand{\matricula}{AL07083340}
+#+LATEX_HEADER: \renewcommand{\matricula}{AL07083340 y AL03001445}
 #+LATEX_HEADER: \renewcommand{\docente}{Francisco Gómez Rubio}
+#+LATEX_HEADER: \AtBeginEnvironment{tabularx}{\small}
 #+OPTIONS: toc:t
 
 Repositorio de trabajo: [[file:README.org][Proyecto-Final/]] · *pendiente de publicar en GitHub* (este entorno no tiene credenciales de publicación).
@@ -306,12 +307,18 @@ interfaz nunca es la única barrera.
 
 ** Actividad 4. Validación consolidada y resultados de OWASP ZAP
 
-#+ATTR_LATEX: :environment tabularx :width \textwidth :align X|X|X|X|X
+#+ATTR_LATEX: :environment tabularx :width \textwidth :align X|X|X|X|X :font \small
 | Vulnerabilidad | Prueba repetida | Antes | Después | Veredicto |
 |----------------+-----------------+-------+---------+-----------|
 | SQLi | ~GET /buscar?q=...~ | 5 filas | 0 filas | Corregido |
-| XSS  | Publicar =<script>alert(...)</script>= | Ejecutado | Escapado + CSP | Corregido |
+| XSS  | Payload XSS | Ejecutado | Escapado + CSP | Corregido |
 | IDOR | =a_auxiliar= lee expediente 1 | 200 | 403 | Corregido |
+
+Payload XSS utilizado en la prueba (se publicó en =/comentarios=):
+
+#+begin_src html
+<script>alert('XSS-PROYECTO-FINAL')</script>
+#+end_src
 
 OWASP ZAP 2.17.0 se ejecutó contra el modo vulnerable (spider + escaneo activo) y
 reportó *3 alertas de riesgo alto, 20 medias, 19 bajas y 99 informativas*. Entre las
