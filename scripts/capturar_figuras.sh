@@ -18,13 +18,20 @@ ZAP="file://$BASE/evidencias/zap/zap_report.html"
 # El XSS de las pruebas automáticas es una etiqueta <script> (no deja texto
 # visible). Se añade un payload visual para que la captura sea legible.
 python3 - <<'PY'
-import os, requests
+import os, re, requests
 s = requests.Session()
-s.post('http://127.0.0.1:5000/login',
-       data={'username': 's_tio', 'password': os.environ['LAB_PASSWORD']}, timeout=10)
-s.post('http://127.0.0.1:5000/comentarios',
-       data={'texto': "<img src=x onerror=\"this.insertAdjacentHTML('afterend','<h2 style=color:#ff8292>XSS EJECUTADO EN EL NAVEGADOR</h2>')\">"},
-       timeout=10)
+datos = {'username': 's_tio', 'password': os.environ['LAB_PASSWORD']}
+token = re.search(r'name="csrf_token"\s+value="([^"]+)"',
+                  s.get('http://127.0.0.1:5000/login', timeout=10).text)
+if token:
+    datos['csrf_token'] = token.group(1)
+s.post('http://127.0.0.1:5000/login', data=datos, timeout=10)
+datos = {'texto': "<img src=x onerror=\"this.insertAdjacentHTML('afterend','<h2 style=color:#ff8292>XSS EJECUTADO EN EL NAVEGADOR</h2>')\">"}
+token = re.search(r'name="csrf_token"\s+value="([^"]+)"',
+                  s.get('http://127.0.0.1:5000/comentarios', timeout=10).text)
+if token:
+    datos['csrf_token'] = token.group(1)
+s.post('http://127.0.0.1:5000/comentarios', data=datos, timeout=10)
 PY
 
 : > evidencias/texto/07_capturas.txt

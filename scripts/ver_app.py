@@ -17,6 +17,7 @@ abierta hasta que se cierra el proceso.
 from __future__ import annotations
 
 import os
+import re
 import sys
 from pathlib import Path
 from urllib.parse import urlparse
@@ -43,11 +44,12 @@ def main() -> None:
     if usuario:
         parsed = urlparse(url)
         base = f"{parsed.scheme}://{parsed.netloc}"
-        r = session.post(
-            f"{base}/login",
-            data={"username": usuario, "password": password},
-            timeout=10,
-        )
+        pagina = session.get(f"{base}/login", timeout=10)
+        datos = {"username": usuario, "password": password}
+        token = re.search(r'name="csrf_token"\s+value="([^"]+)"', pagina.text)
+        if token:
+            datos["csrf_token"] = token.group(1)
+        r = session.post(f"{base}/login", data=datos, timeout=10)
         if r.status_code != 200 or "Salir" not in r.text:
             raise SystemExit(f"No se pudo autenticar como {usuario}")
 

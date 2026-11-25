@@ -12,6 +12,7 @@ Solo se usan datos ficticios y direcciones de loopback. No debe exponerse a Inte
 
 from __future__ import annotations
 
+import hmac
 import json
 import os
 import re
@@ -72,6 +73,7 @@ PATRON_XSS = re.compile(
     r"<\s*script|javascript:|on(error|load|click|focus)\s*=|<\s*img[^>]*src\s*=",
     re.IGNORECASE,
 )
+CSRF_CAMPO = "csrf_token"
 
 
 # ---------------------------------------------------------------------------
@@ -245,6 +247,15 @@ def usuario_actual() -> sqlite3.Row | None:
         return conn.execute("SELECT * FROM usuarios WHERE id = ?", (uid,)).fetchone()
 
 
+def puede_leer_expediente(fila: sqlite3.Row | None, usuario: sqlite3.Row | None) -> bool:
+    """Autorización centralizada por objeto: propietario o rol socio."""
+    return bool(
+        fila
+        and usuario
+        and (fila["owner_id"] == usuario["id"] or usuario["rol"] == "socio")
+    )
+
+
 def login_required(view):
     from functools import wraps
 
@@ -270,10 +281,33 @@ def cabeceras(respuesta):
             "base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
         )
         respuesta.headers["X-Frame-Options"] = "DENY"
+        respuesta.headers["Cache-Control"] = "no-store"
+        respuesta.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+        respuesta.headers["Cross-Origin-Resource-Policy"] = "same-origin"
     else:
         # intencional: sin CSP para permitir la demostración de XSS
         respuesta.headers["X-Lab-Mode"] = "vulnerable"
     return respuesta
+
+
+@app.before_request
+def validar_csrf():
+    """Exige token por sesión en toda petición que cambie estado (modo seguro)."""
+    if MODO != "secure" or request.method not in {"POST", "PUT", "PATCH", "DELETE"}:
+        return None
+    recibido = request.form.get(
+        CSRF_CAMPO, request.headers.get("X-CSRF-Token", "")
+    )
+    esperado = session.get(CSRF_CAMPO, "")
+    if esperado and hmac.compare_digest(str(recibido), str(esperado)):
+        return None
+    registrar_evento(
+        "CSRF_RECHAZADO",
+        "alto",
+        f"Petición {request.method} {request.path} sin token CSRF válido",
+        estado=403,
+    )
+    return jsonify(error="Token CSRF inválido o ausente"), 403
 
 
 @app.before_request
@@ -301,6 +335,20 @@ def tema_plantillas():
     """Tema ejecutivo opcional, solo para las capturas de presentación."""
     tema = "ejecutivo" if request.args.get("tema") == "ejecutivo" else "laboratorio"
     return {"tema": tema}
+
+
+@app.context_processor
+def csrf_contexto():
+    """Expone un token por sesión a los formularios del modo seguro."""
+
+    def token_csrf() -> str:
+        if MODO != "secure":
+            return ""
+        if CSRF_CAMPO not in session:
+            session[CSRF_CAMPO] = secrets.token_urlsafe(32)
+        return session[CSRF_CAMPO]
+
+    return {"csrf_token": token_csrf}
 
 
 # ---------------------------------------------------------------------------
@@ -404,12 +452,7 @@ def expediente(expediente_id: int):
     usuario = usuario_actual()
     if MODO == "secure":
         # CORRECCIÓN 3: autorización en servidor (owner o rol socio).
-        permitido = bool(
-            fila
-            and usuario
-            and (fila["owner_id"] == usuario["id"] or usuario["rol"] == "socio")
-        )
-        if not permitido:
+        if not puede_leer_expediente(fila, usuario):
             registrar_evento(
                 "ACCESO_DENEGADO",
                 "alto",
@@ -439,9 +482,7 @@ def api_expediente(expediente_id: int):
         ).fetchone()
     usuario = usuario_actual()
     if MODO == "secure":
-        if not fila or not usuario or not (
-            fila["owner_id"] == usuario["id"] or usuario["rol"] == "socio"
-        ):
+        if not puede_leer_expediente(fila, usuario):
             registrar_evento(
                 "ACCESO_DENEGADO",
                 "alto",

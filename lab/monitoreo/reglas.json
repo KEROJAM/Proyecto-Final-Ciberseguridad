@@ -1,5 +1,5 @@
 {
-  "version": "1.0",
+  "version": "1.1",
   "descripcion": "Reglas de correlación del mecanismo de monitoreo y detección (Parte B, Opción B).",
   "reglas": [
     {
@@ -41,6 +41,14 @@
       "umbral": 1,
       "ventana_segundos": 60,
       "severidad": "bajo"
+    },
+    {
+      "id": "CSRF-001",
+      "tipo": "CSRF_RECHAZADO",
+      "titulo": "Petición de cambio de estado sin token CSRF válido",
+      "umbral": 1,
+      "ventana_segundos": 60,
+      "severidad": "alto"
     }
   ]
 }

@@ -1,0 +1,47 @@
+CONTROLES ADICIONALES · CSRF Y CABECERAS DE SEGURIDAD
+Objetivo: http://127.0.0.1:5001 (modo corregido)
+Entorno: laboratorio local autorizado · datos ficticios
+
+[1] Formulario de login
+  GET /login -> 200
+  Campo csrf_token presente: True
+  Longitud del token: 43 caracteres (valor no publicado)
+
+[2] Envío de formularios
+  POST /login sin token -> 403 {"error":"Token CSRF inv\u00e1lido o ausente"}
+
+  POST /login con token  -> 200 (sesión iniciada: True)
+
+[3] Formulario de comentarios
+  POST /comentarios sin token -> 403
+  POST /comentarios con token  -> 200
+  Comentario autorizado visible: True
+
+[4] Cabeceras de respuesta (GET /comentarios)
+  Content-Security-Policy: default-src 'self'; script-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  Cache-Control: no-store
+  Permissions-Policy: geolocation=(), microphone=(), camera=()
+  Cross-Origin-Resource-Policy: same-origin
+
+[5] Regresión de autorización
+  a_auxiliar -> /expediente/1     -> 403 (esperado 403)
+  a_auxiliar -> /api/expediente/1 -> 403 (esperado 403)
+
+[6] Registro y detección
+  GET /api/alertas -> 200; eventos en memoria: 23
+  CSRF_RECHAZADO registrados: 2
+  Alertas CSRF-001: 1
+    AL-17D1D218 · severidad=alto · 2/1 eventos en 60s
+
+Conclusión: el modo seguro exige un token imprevisible por sesión en cada
+cambio de estado, no almacena respuestas sensibles en caché y conserva la
+autorización por objeto. Los intentos sin token generan una alerta de severidad
+alta en lugar de pasar desapercibidos.
+
+Nota: el informe ZAP incluido en el repo corresponde al escaneo original;
+esta verificación es manual/automatizada y no sustituye un nuevo escaneo.
+
+Generado: 2026-11-25T18:41:04.116199+00:00

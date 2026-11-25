@@ -11,7 +11,7 @@
 #+LATEX_HEADER: \AtBeginEnvironment{tabularx}{\small}
 #+OPTIONS: toc:t
 
-Repositorio de trabajo: [[file:README.org][Proyecto-Final/]] · *pendiente de publicar en GitHub* (este entorno no tiene credenciales de publicación).
+Repositorio publicado: [[https://github.com/KEROJAM/Proyecto-Final-Cyberseguridad][KEROJAM/Proyecto-Final-Cyberseguridad]] · instrucciones de ejecución en [[file:README.org][README.org]].
 
 #+BEGIN_abstract
 Este informe continúa el avance del proyecto de ciberseguridad del despacho ficticio
@@ -20,7 +20,9 @@ cifrado, respaldos y firewall en la etapa anterior, se evalúa ahora la superfic
 de la organización. Se construyó una aplicación Flask de laboratorio con dos modos:
 uno deliberadamente vulnerable y otro corregido. Se reprodujeron y mitigaron
 inyección SQL, XSS y control de acceso roto (IDOR/BOLA), y se implementó un mecanismo
-de monitoreo y detección como mejora específica (Opción B).
+de monitoreo y detección como mejora específica (Opción B). En una revisión posterior se
+cerraron las brechas que ZAP dejó como riesgo medio: token anti-CSRF por sesión y
+cabeceras adicionales de caché y navegador.
 
 Las pruebas muestran que el payload ~Delta' OR '1'='1' --~ pasó de devolver 5
 expedientes a 0; el script =<script>alert('XSS-PROYECTO-FINAL')</script>= pasó de
@@ -51,6 +53,7 @@ organización seleccionada en el avance.
 | Registros y detección        | Sin correlación              | 4 alertas de reglas + panel               | [[file:evidencias/texto/05_registros_monitoreo.txt][05_registros_monitoreo.txt]] |
 | Mejora organizacional (Opción B) | Sin visibilidad central   | Eventos JSON + reglas + panel =/alertas=   | [[file:lab/monitoreo/reglas.json][reglas.json]]                          |
 | OWASP ZAP (antes/después)    | 3 alto, 20 medio, 19 bajo, 99 informativo | 0 alto, 3 medio, 18 bajo, 111 informativo | [[file:evidencias/texto/06_zap_antes_despues.txt][06_zap_antes_despues.txt]] |
+| Controles adicionales        | Formularios sin token CSRF         | Token por sesión + 403 y alerta si falta | [[file:evidencias/texto/08_controles_adicionales.txt][08_controles_adicionales.txt]] |
 
 ** Alcance y límites
 
@@ -333,9 +336,11 @@ confirmación definitiva de cada vulnerabilidad proviene de las peticiones repro
 
 El mismo escaneo se repitió contra el modo corregido. El resultado fue *0 alertas altas,
 3 medias, 18 bajas y 111 informativas*: desaparecieron SQLi, XSS persistente/reflejado,
-la ausencia de CSP (11) y el cabecero anti-clickjacking (6). Quedan tres alertas medias
-de ausencia de tokens anti-CSRF en =/login= y =/comentarios=, documentadas como riesgo
-pendiente. La comparación completa está en
+la ausencia de CSP (11) y el cabecero anti-clickjacking (6). Quedaron tres alertas medias
+de ausencia de tokens anti-CSRF en =/login= y =/comentarios=. Esas tres brechas se cerraron
+después con un token por sesión, verificado en el apartado «Cierre de brechas posteriores»;
+el informe ZAP conservado corresponde a la pasada original y *no* afirma un nuevo escaneo.
+La comparación completa está en
 [[file:evidencias/texto/06_zap_antes_despues.txt][06_zap_antes_despues.txt]] y el informe
 corregido en [[file:evidencias/zap/secure/zap_resumen.txt][zap_resumen.txt (secure)]].
 ZAP no detectó IDOR/BOLA automáticamente en ninguna de las dos pasadas, por lo que ese
@@ -425,9 +430,53 @@ pero el veredicto de cada regla se mantiene.
   datos reales antes de aplicar bloqueos automáticos.
 - Quedan pendientes MFA para aplicaciones web, HTTPS y filtrado de correo descritos
   en el avance.
-- No se implementaron tokens anti-CSRF: ZAP los reporta en =/login= y =/comentarios=.
+- Los tokens anti-CSRF ya están implementados en el modo seguro (ver el apartado de
+  cierre de brechas); en el modo vulnerable se omiten a propósito para conservar la
+  demostración original.
 - La cabecera =Server= de Werkzeug divulga la versión; en producción debe ocultarse
   mediante un reverse proxy.
+
+** Cierre de brechas posteriores al informe original
+
+El escaneo del modo corregido dejó tres hallazgos medios por ausencia de tokens
+anti-CSRF. Se cerraron con una mejora adicional verificable, sin modificar el modo
+vulnerable que sirve de referencia para las pruebas «antes».
+
+| Brecha abierta | Control implementado | Archivo | Evidencia |
+|----------------+----------------------+---------+-----------|
+| Formularios sin token anti-CSRF | Token aleatorio por sesión en =/login= y =/comentarios=, comparado con =hmac.compare_digest= | =app/app.py=, =login.html=, =comentarios.html= | [[file:evidencias/texto/08_controles_adicionales.txt][08_controles_adicionales.txt]] |
+| Intento sin token no generaba señal | Evento =CSRF_RECHAZADO= y regla =CSRF-001= (severidad alta) | =lab/monitoreo/reglas.json= | Ídem, sección 6 |
+| Respuestas almacenables en caché | =Cache-Control: no-store=, =Permissions-Policy= y =Cross-Origin-Resource-Policy= | =app/app.py= (=after_request=) | Ídem, sección 4 |
+
+#+begin_src python
+recibido = request.form.get(
+    "csrf_token", request.headers.get("X-CSRF-Token", "")
+)
+esperado = session.get("csrf_token", "")
+if esperado and hmac.compare_digest(str(recibido), str(esperado)):
+    return None  # petición legítima
+registrar_evento("CSRF_RECHAZADO", "alto", "...", estado=403)
+return jsonify(error="Token CSRF inválido o ausente"), 403
+#+end_src
+
+Resultados repetibles con =lab/pruebas/verificar_controles.py=:
+
+- =POST /login= sin token → *403*; con token → *200* con sesión iniciada.
+- =POST /comentarios= sin token → *403*; con token → *200* y comentario visible.
+- Cabeceras presentes: CSP, =X-Frame-Options: DENY=, =X-Content-Type-Options=,
+  =Referrer-Policy=, =Cache-Control: no-store=, =Permissions-Policy= y
+  =Cross-Origin-Resource-Policy=.
+- Regresión: =a_auxiliar= sigue recibiendo *403* en =/expediente/1= y en la API.
+- El registro correlacionó dos eventos =CSRF_RECHAZADO= en una alerta =CSRF-001=.
+
+Por qué reduce el riesgo: un sitio malicioso no puede leer el token de la sesión de la
+víctima (política de mismo origen y =SameSite=Lax=), por lo que sus formularios no
+pasan la validación. La comparación en tiempo constante evita filtrar el token por
+tiempos de respuesta, y el evento fallido convierte un intento silencioso en una señal
+de detección. =Cache-Control: no-store= impide que un navegador compartido conserve
+respuestas con datos de expedientes. Estos resultados son pruebas manuales
+automatizadas: *no se volvió a ejecutar ZAP* después de este cambio, por lo que los
+informes adjuntos siguen siendo los de la pasada original.
 
 * Actividad 9. Respuesta a incidentes
 
@@ -436,7 +485,7 @@ la narrativa de ="Factura pendiente de pago.zip"=.
 
 | Etapa | Acciones | Estado |
 |-------+----------+--------|
-| Detección | Alertas por fallos de login, =SQLI_DETECTADO=, =XSS_DETECTADO= y =ACCESO_DENEGADO=; revisión de =logs/security.jsonl= y del panel =/alertas=. | *Probado* en el laboratorio con eventos controlados |
+| Detección | Alertas por fallos de login, =SQLI_DETECTADO=, =XSS_DETECTADO=, =CSRF_RECHAZADO= y =ACCESO_DENEGADO=; revisión de =logs/security.jsonl= y del panel =/alertas=. | *Probado* en el laboratorio con eventos controlados |
 | Análisis | Correlacionar IP, usuario, ruta y timestamp; identificar si hay iteración de =/expediente/<id>= o patrones SQLi/XSS. | *Probado* parcialmente: se reconstruyó la secuencia desde los eventos |
 | Contención | Negar el acceso al perfil comprometido, bloquear la IP en el firewall y desmontar el volumen de respaldo. | *Recomendación* probada antes como reglas =nftables= y política de desmontaje; el bloqueo automático desde este prototipo no se implementó |
 | Recuperación | Restaurar expedientes desde el respaldo cifrado verificado con =sha256sum= y reconstruir la base de la aplicación desde =init_db()=. | *Probado* en el avance para archivos; no se ejecutó un borrado real de la base en esta etapa |
@@ -465,27 +514,41 @@ ejecutaron sobre sistemas productivos porque el laboratorio está aislado.
 6. El riesgo residual sigue siendo relevante: el modo vulnerable debe permanecer
    aislado, y en producción harían falta HTTPS, MFA en la web, SIEM y revisión
    periódica de reglas.
+7. El cierre de brechas posteriores añadió tokens anti-CSRF, reglas de detección
+   asociadas y cabeceras de caché/navegador; la evidencia 08 registra el paso de
+   403 sin token a 200 con token y la alerta generada ante el intento inválido.
 
 * Anexos
 
 ** A. Repositorio y comandos de reproducción
 
-El proyecto se entrega como repositorio local en =~/Projects/Ciberseguridad/Proyecto-Final=.
-Para publicarlo, crear el repositorio remoto y añadirlo con =git remote add origin <URL>=;
-no se publican credenciales ni secretos en este entregable.
+El proyecto está publicado en
+[[https://github.com/KEROJAM/Proyecto-Final-Cyberseguridad][github.com/KEROJAM/Proyecto-Final-Cyberseguridad]].
+No se publican credenciales ni secretos en este entregable: la contraseña se genera
+al azar en la sesión de la shell y se comparte solo por variable de entorno.
 
 #+begin_src bash
-cd ~/Projects/Ciberseguridad/Proyecto-Final
+git clone https://github.com/KEROJAM/Proyecto-Final-Cyberseguridad.git
+cd Proyecto-Final-Cyberseguridad
+
+export LAB_PASSWORD="$(openssl rand -hex 12)"
+export LAB_USER_PASSWORD="$LAB_PASSWORD"
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r app/requirements.txt
 
-LAB_USER_PASSWORD='Laboratorio' lab/run.sh vulnerable 5000 &
-LAB_USER_PASSWORD='Laboratorio' lab/run.sh secure 5001 &
-LAB_PASSWORD='Laboratorio' python3 lab/pruebas/probar.py
+lab/run.sh vulnerable 5000 &
+lab/run.sh secure 5001 &
+python3 lab/pruebas/probar.py
+python3 lab/pruebas/verificar_controles.py
 
 lab/zap/scan.sh http://127.0.0.1:5000 evidencias/zap
 lab/zap/scan.sh http://127.0.0.1:5001 evidencias/zap/secure
-scripts/exportar.sh
+scripts/exportar.sh   # requiere Emacs/Org, LaTeX y ~/Documents/Clases/sample.tex
 #+end_src
+
+=INFORME.pdf= es la exportación de la versión original (15 páginas). Después de este
+cierre de brechas la fuente de verdad es =INFORME.org=; el PDF debe regenerarse con el
+comando anterior cuando el entorno LaTeX esté disponible.
 
 ** B. Índice de evidencias
 
@@ -498,6 +561,7 @@ scripts/exportar.sh
 | [[file:evidencias/texto/05_registros_monitoreo.txt][05_registros_monitoreo.txt]] | Eventos controlados y alertas correlacionadas |
 | [[file:evidencias/texto/06_zap_antes_despues.txt][06_zap_antes_despues.txt]] | Comparación de hallazgos ZAP antes/después |
 | [[file:evidencias/texto/07_capturas.txt][07_capturas.txt]] | Geometría y URLs de las 14 capturas |
+| [[file:evidencias/texto/08_controles_adicionales.txt][08_controles_adicionales.txt]] | CSRF, cabeceras y regresión de IDOR |
 | [[file:evidencias/zap/zap_resumen.txt][zap_resumen.txt]] | Resumen de hallazgos de OWASP ZAP (vulnerable) |
 | [[file:evidencias/zap/secure/zap_resumen.txt][zap_resumen.txt (secure)]] | Resumen de hallazgos de OWASP ZAP (corregido) |
 | [[file:capturas/documento/][capturas/documento/]] | Capturas usadas en este informe |

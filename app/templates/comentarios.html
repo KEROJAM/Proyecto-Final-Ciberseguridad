@@ -9,6 +9,7 @@
   <p class="ok">Autoescape de Jinja + CSP: el contenido se muestra como texto, nunca se ejecuta.</p>
   {% endif %}
   <form method="post">
+    {% if modo == 'secure' %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% endif %}
     <label>Nuevo comentario
       <textarea name="texto" rows="3" placeholder="Escriba un comentario"></textarea>
     </label>

@@ -1,5 +1,5 @@
 ========================================================================
-Evidencia generada: 2026-11-24T23:46:20.440916+00:00
+Evidencia generada: 2026-11-25T18:41:03.238198+00:00
 Entorno: laboratorio local autorizado · datos ficticios
 ========================================================================
 
@@ -8,16 +8,16 @@ ACTIVIDAD 1 · PREPARACIÓN Y VERIFICACIÓN DE ENDPOINTS
 [VULNERABLE] base=http://127.0.0.1:5000
   GET /                      -> 200  (2746 bytes)
   GET /health                -> 200  (56 bytes)
-  GET /login                 -> 200  (1570 bytes)
+  GET /login                 -> 200  (1575 bytes)
   GET /buscar?q=Delta        -> 200  (1872 bytes)
-  GET /comentarios           -> 200  (6375 bytes)
+  GET /comentarios           -> 200  (1819 bytes)
   /health JSON: {"alertas": 0, "eventos": 0, "modo": "vulnerable", "ok": true}
 
 [CORREGIDO] base=http://127.0.0.1:5001
   GET /                      -> 200  (2756 bytes)
   GET /health                -> 200  (52 bytes)
-  GET /login                 -> 200  (1580 bytes)
+  GET /login                 -> 200  (1676 bytes)
   GET /buscar?q=Delta        -> 200  (1805 bytes)
-  GET /comentarios           -> 200  (6607 bytes)
+  GET /comentarios           -> 200  (1902 bytes)
   /health JSON: {"alertas": 0, "eventos": 0, "modo": "secure", "ok": true}
 

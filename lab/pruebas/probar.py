@@ -41,17 +41,37 @@ def filas(html: str) -> int:
     return len(re.findall(r'<a href="/expediente/\d+"', html))
 
 
-def login(base: str, password: str, usuario: str) -> requests.Session:
+def token_csrf(s: requests.Session, base: str, ruta: str) -> str:
+    """Lee el token anti-CSRF del formulario del modo seguro."""
+    r = s.get(base + ruta, timeout=10)
+    coincidencia = re.search(r'name="csrf_token"\s+value="([^"]+)"', r.text)
+    if not coincidencia:
+        raise RuntimeError(f"No se encontró token CSRF en {base}{ruta}")
+    return coincidencia.group(1)
+
+
+def login(base: str, password: str, usuario: str, seguro: bool = False) -> requests.Session:
     s = requests.Session()
+    datos = {"username": usuario, "password": password}
+    if seguro:
+        datos["csrf_token"] = token_csrf(s, base, "/login")
     r = s.post(
         f"{base}/login",
-        data={"username": usuario, "password": password},
+        data=datos,
         timeout=10,
         allow_redirects=True,
     )
     if r.status_code != 200 or "Salir" not in r.text:
         raise RuntimeError(f"No se pudo iniciar sesión como {usuario} en {base}")
     return s
+
+
+def publicar(s: requests.Session, base: str, texto: str, seguro: bool = False):
+    """Publica un comentario; en modo seguro adjunta el token de la sesión."""
+    datos = {"texto": texto}
+    if seguro:
+        datos["csrf_token"] = token_csrf(s, base, "/comentarios")
+    return s.post(f"{base}/comentarios", data=datos, timeout=10)
 
 
 def main() -> None:
@@ -114,7 +134,7 @@ def main() -> None:
 
     # --- XSS ----------------------------------------------------------------
     sv = login(vuln, password, "s_tio")
-    sv.post(f"{vuln}/comentarios", data={"texto": XSS}, timeout=10)
+    publicar(sv, vuln, XSS)
     rv = sv.get(f"{vuln}/comentarios", timeout=10)
     lineas = [
         "ACTIVIDAD 2/4 · CROSS-SITE SCRIPTING (XSS)",
@@ -128,8 +148,8 @@ def main() -> None:
         "  Observación: el navegador interpreta la etiqueta como JavaScript.",
         "",
     ]
-    ss = login(seg, password, "s_tio")
-    ss.post(f"{seg}/comentarios", data={"texto": XSS}, timeout=10)
+    ss = login(seg, password, "s_tio", seguro=True)
+    publicar(ss, seg, XSS, seguro=True)
     rs = ss.get(f"{seg}/comentarios", timeout=10)
     lineas += [
         "[DESPUÉS · modo corregido]",
@@ -158,11 +178,11 @@ def main() -> None:
         "  Observación: no hay comprobación de propiedad ni de rol en el servidor.",
         "",
     ]
-    aa = login(seg, password, "a_auxiliar")
+    aa = login(seg, password, "a_auxiliar", seguro=True)
     ra = aa.get(f"{seg}/expediente/1", timeout=10)
     ra_api = aa.get(f"{seg}/api/expediente/1", timeout=10)
     propio = aa.get(f"{seg}/expediente/5", timeout=10)
-    admin = login(seg, password, "s_tio").get(f"{seg}/expediente/1", timeout=10)
+    admin = login(seg, password, "s_tio", seguro=True).get(f"{seg}/expediente/1", timeout=10)
     lineas += [
         "[DESPUÉS · modo corregido]",
         f"  GET /expediente/1 como a_auxiliar -> {ra.status_code} (esperado 403)",
@@ -175,13 +195,20 @@ def main() -> None:
     guardar("04_idor_validacion.txt", lineas)
 
     # --- Actividad 5 + Parte B: registros y detección -----------------------
-    ses = login(seg, password, "s_tio")
+    ses = login(seg, password, "s_tio", seguro=True)
+    token_login = token_csrf(ses, seg, "/login")
     for _ in range(3):
-        requests.post(
-            f"{seg}/login", data={"username": "s_tio", "password": "incorrecta"}, timeout=10
+        ses.post(
+            f"{seg}/login",
+            data={
+                "username": "s_tio",
+                "password": "incorrecta",
+                "csrf_token": token_login,
+            },
+            timeout=10,
         )
     requests.get(f"{seg}/buscar", params={"q": SQLI}, timeout=10)
-    ses.post(f"{seg}/comentarios", data={"texto": XSS}, timeout=10)
+    publicar(ses, seg, XSS, seguro=True)
     aa.get(f"{seg}/expediente/1", timeout=10)
     aa.get(f"{seg}/expediente/2", timeout=10)
     datos = ses.get(f"{seg}/api/alertas", timeout=10).json()

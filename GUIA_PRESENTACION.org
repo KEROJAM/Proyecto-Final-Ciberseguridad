@@ -1,0 +1,192 @@
+#+TITLE: Guía de presentación · Proyecto final de Ciberseguridad
+#+LANGUAGE: es
+
+Esta guía explica *qué pide la tarea*, *qué se hizo realmente* en el repositorio y *cómo
+defenderlo en cinco u ocho minutos*. Está pensada para alguien que quiere entender el
+proyecto desde cero antes de exponerlo.
+
+* 1. Qué pide la tarea, en palabras simples
+
+La consigna tiene dos bloques. *Parte A (60 %)* es obligatoria para todos los equipos y
+usa una aplicación Flask de laboratorio: hay que encontrar, demostrar y corregir tres
+fallos web clásicos. *Parte B (40 %)* vuelve a la organización ficticia del avance y pide
+una mejora de seguridad verificable.
+
+| Parte | Actividades | Qué hay que entregar |
+|-------+-------------+----------------------|
+| A · Práctica común | 1. Preparar entorno y ZAP; 2. Identificar SQLi, XSS e IDOR/BOLA; 3. Implementar correcciones; 4. Repetir pruebas; 5. Analizar registros | App funcionando, evidencias antes/después, código corregido, registros |
+| B · Mejora propia | 6. Recuperar contexto de la organización; 7. Implementar una mejora (A red, B monitoreo, C respaldos, D autenticación); 8. Evaluar resultados; 9. Procedimiento de respuesta a incidentes | Mejora probada y procedimiento que distinga lo probado de lo recomendado |
+
+*Entregables*: informe técnico en PDF, repositorio con código/instrucciones/evidencias y
+presentación ejecutiva. *No se publican* credenciales, datos personales reales ni secretos.
+
+La rúbrica grande de la clase además premia controles técnicos con pruebas (30 %),
+simulacro de respuesta con fases documentadas (25 %), marcos normativos (20 %), calidad
+del reporte (15 %) e innovación (10 %). El informe ya relaciona los controles con
+LFPDPPP/GDPR y el escenario de ransomware; la innovación se puede argumentar con la
+correlación de reglas + panel propio en lugar de importar un SIEM comercial.
+
+* 2. Qué se hizo en este repositorio
+
+La idea central es que *una sola aplicación tiene dos modos*:
+
+- =LAB_MODE=vulnerable= (puerto 5000): conserva a propósito SQLi, XSS e IDOR para poder
+  mostrar el "antes".
+- =LAB_MODE=secure= (puerto 5001): aplica las tres correcciones, añade monitoreo y, en
+  esta revisión, token anti-CSRF y cabeceras extra.
+
+Cada modo usa su propia base SQLite y su propio directorio de logs, así que las pruebas
+no se contaminan entre sí. Todo corre en =127.0.0.1= con datos ficticios: clientes,
+RFC, montos y usuarios inventados.
+
+| Archivo | Para qué sirve | Actividad cubierta |
+|---------+----------------+--------------------|
+| =app/app.py= | Toda la lógica: rutas, consultas, autorización, registro y alertas | 2, 3, 4, 5, 7 |
+| =app/templates/= | Plantillas Jinja; el modo vulnerable usa el filtro =safe= sin escapar | 2, 3, 4 |
+| =lab/run.sh= | Arranca cada modo con base y puerto propios | 1 |
+| =lab/pruebas/probar.py= | Reproduce los payloads y reescribe =evidencias/texto/0[1-5]= | 1-5 |
+| =lab/pruebas/verificar_controles.py= | Prueba CSRF, cabeceras y regresión de IDOR; escribe la evidencia 08 | 4, 7 (revisión) |
+| =lab/monitoreo/reglas.json= | Umbrales de correlación (SQLi, XSS, accesos, login, tasa, CSRF) | 5, 7 |
+| =lab/zap/= | Scripts de instalación y escaneo; informes JSON/HTML guardados | 1, 4 |
+| =evidencias/= | Resultados de texto y de ZAP antes/después | 4, 5 |
+| =capturas/= | Imágenes usadas en el informe y en la presentación | Entregables |
+| =INFORME.org= | Informe técnico completo (fuente; =INFORME.pdf= es su exportación original) | Entregable 1 |
+| =GUIA_PRESENTACION.org= | Esta guía | Entregable 3 |
+
+* 3. Cómo ejecutarlo en vivo
+
+#+begin_src bash
+git clone https://github.com/KEROJAM/Proyecto-Final-Cyberseguridad.git
+cd Proyecto-Final-Cyberseguridad
+
+export LAB_PASSWORD="$(openssl rand -hex 12)"
+export LAB_USER_PASSWORD="$LAB_PASSWORD"
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r app/requirements.txt
+
+lab/run.sh vulnerable 5000 &
+lab/run.sh secure 5001 &
+python3 lab/pruebas/probar.py
+python3 lab/pruebas/verificar_controles.py
+#+end_src
+
+Usuarios ficticios: =s_tio= (socio), =c_contador= (contador), =a_auxiliar= (auxiliar).
+La contraseña la eliges tú en la variable de entorno; no está en el repo. Si no la
+defines, la app genera una efímera y la imprime en la terminal.
+
+* 4. Guion sugerido (8 minutos)
+
+** Minuto 1 · Contexto y problema
+
+"El despacho ficticio Ramírez & Asociados ya tenía controles de red, MFA en SSH,
+cifrado y respaldos del avance. Pero el ransomware mostró dos brechas: no había
+visibilidad de eventos web y las aplicaciones no se habían evaluado. Esta segunda etapa
+parte de esa pregunta: ¿qué pasa si la puerta de entrada es la aplicación?"
+
+Señala =capturas/presentacion/01_contexto.png=.
+
+** Minuto 2 · Estrategia de laboratorio
+
+"Construimos una app con dos modos. El vulnerable es el 'antes' y el corregido es el
+'después'. Eso permite repetir exactamente la misma petición y comparar respuestas, en
+lugar de solo explicar el parche."
+
+Señala =evidencias/texto/01_entorno_endpoints.txt= y el índice =/=.
+
+** Minuto 3 · SQL Injection
+
+Payload: ~Delta' OR '1'='1' --~ contra =/buscar?q=...=.
+
+"En el modo vulnerable la entrada se concatenaba dentro del =LIKE=, así que el payload
+cerró la comilla y devolvió los 5 expedientes. En el corregido se usa =LIKE ?= con el
+valor enlazado: el mismo texto se compara literalmente y devuelve 0 filas."
+
+Números: *5 → 0 filas*. Señala las capturas 02 y 06 y la evidencia 02.
+
+** Minuto 4 · XSS
+
+Payload: =<script>alert('XSS-PROYECTO-FINAL')</script>= publicado en =/comentarios=.
+
+"La plantilla vulnerable marcaba el contenido con =|safe=, así que el navegador lo
+ejecutaba. En el corregido Jinja escapa a =&lt;script&gt;= y además la cabecera CSP
+bloquea scripts inline aunque escapara algo por otra vía."
+
+Números: *script ejecutado → escapado + CSP*. Capturas 03 y 07, evidencia 03.
+
+** Minuto 5 · IDOR/BOLA
+
+"El usuario =a_auxiliar= pedía =/expediente/1=, que es de =s_tio=. Sin verificación de
+propiedad obtenía 200 y los datos. Ahora el servidor compara =owner_id= con la sesión o
+el rol =socio=, y devuelve 403. Lo mismo en la API =/api/expediente/<id>=. El propietario
+y el socio siguen teniendo 200."
+
+Números: *200 → 403*. Capturas 04 y 08, evidencia 04.
+
+** Minuto 6 · ZAP y detección
+
+"ZAP confirmó SQLi y XSS en el vulnerable: 3 alertas altas. Tras corregir bajaron a 0
+altas; quedaron 3 medias por falta de tokens anti-CSRF, que se cerraron después. El IDOR
+no lo detecta ZAP porque necesita sesión y comparar propiedad: por eso se validó a mano."
+
+"Como mejora de la Parte B elegimos monitoreo: cada evento se escribe en JSONL, las
+reglas correlacionan por ventana de 60 segundos y el panel =/alertas= lo muestra al rol
+socio. Un ataque bloqueado deja huella igualmente." Capturas 05 y 09, evidencias 05 y 06.
+
+** Minuto 7 · Mejora adicional y respuesta a incidentes
+
+"En la revisión final añadimos token anti-CSRF por sesión, comparado en tiempo constante,
+y cabeceras =Cache-Control: no-store=, =Permissions-Policy= y
+=Cross-Origin-Resource-Policy=. La evidencia 08 muestra 403 sin token y 200 con token,
+más una alerta =CSRF-001=."
+
+"El procedimiento de respuesta cubre detección, análisis, contención, recuperación y
+verificación. La tabla del informe marca qué está probado en laboratorio y qué queda como
+recomendación: por ejemplo, desmontar el NAS y bloquear IP se probó antes con nftables,
+pero el bloqueo automático desde esta app no se implementó."
+
+** Minuto 8 · Conclusión y límites
+
+"Las tres vulnerabilidades quedaron corregidas y verificadas con las mismas peticiones.
+Lo que sigue pendiente es honesto: HTTPS, MFA también en la web, envío a SIEM, ocultar la
+cabecera =Server= y volver a pasar ZAP tras el último cambio. El modo vulnerable debe
+quedarse aislado."
+
+* 5. Cómo explicar cada fallo desde cero
+
+| Fallo | Causa raíz | Prueba | Corrección | Por qué funciona |
+|-------+------------+--------+------------+------------------|
+| SQLi (CWE-89) | El parámetro =q= se concatena en la SQL | =Delta' OR '1'='1' --= devuelve 5 filas | =LIKE ?= con parámetro enlazado y límite de 80 caracteres | El motor compila la consulta antes de insertar el dato; las comillas ya no cambian la gramática |
+| XSS (CWE-79) | Filtro =safe= en la plantilla de comentarios | =<script>alert(...)= se ejecuta | Autoescape de Jinja + CSP =default-src 'self'= | Los caracteres se convierten en entidades y CSP es una segunda capa |
+| IDOR/BOLA (CWE-639) | Se busca el recurso por id sin comprobar dueño | =a_auxiliar= lee el expediente 1 → 200 | Autorización en servidor por =owner_id= o rol =socio=, denegación por defecto | La interfaz nunca es la única barrera; la decisión se toma en el servidor |
+| CSRF (CWE-352) | Los formularios no demostraban origen legítimo | POST sin token → 403 | Token por sesión + =SameSite=Lax= + =compare_digest= | Un sitio de terceros no puede leer el token de la sesión ajena |
+
+* 6. Preguntas que suelen preguntar
+
+- *¿Por qué dejar el modo vulnerable en el repo?* Porque es el laboratorio autorizado que
+  permite demostrar el antes. Está en =127.0.0.1= y advierte en cada página que es modo
+  vulnerable; nunca debe exponerse.
+- *¿ZAP detectó el IDOR?* No. Necesita autenticarse y entender quién es dueño de cada
+  objeto. Por eso se hizo la prueba manual con =a_auxiliar=.
+- *¿Por qué hay 0 altas pero aún 3 medias en el ZAP guardado?* Las medias son los tokens
+  anti-CSRF del informe original; se cerraron después con la evidencia 08. El PDF/ZAP
+  guardado no se volvió a generar, y el informe lo dice explícitamente.
+- *¿Los datos son reales?* No. Clientes, montos, RFC y cuentas son ficticios; la
+  contraseña se genera en la shell y no se versiona.
+- *¿Qué marcos normativos se tocan?* LFPDPPP y GDPR por los datos personales de clientes;
+  NIST/ISO 27001 se pueden mencionar como referencia para registro, control de acceso y
+  respuesta, pero el informe no alega certificación.
+- *¿El PDF está actualizado?* =INFORME.pdf= es la exportación original de 15 páginas.
+  La fuente con los cambios nuevos es =INFORME.org=; hay que reexportarlo con
+  =scripts/exportar.sh= si está disponible Emacs/Org + LaTeX + la plantilla local.
+
+* 7. Comandos útiles para la defensa en vivo
+
+#+begin_src bash
+curl 'http://127.0.0.1:5000/buscar?q=Delta%27%20OR%20%271%27%3D%271%27%20--'
+curl 'http://127.0.0.1:5001/buscar?q=Delta%27%20OR%20%271%27%3D%271%27%20--'
+curl -s -D - http://127.0.0.1:5001/health -o /dev/null
+python3 lab/pruebas/verificar_controles.py | tail -5
+#+end_src
+
+Si la presentación es ejecutiva, usa las imágenes de =capturas/presentacion/=: contexto,
+vulnerabilidades, correcciones, monitoreo y hallazgos ZAP, en ese orden.

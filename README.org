@@ -6,22 +6,28 @@
 Todo se ejecuta en =127.0.0.1= con datos ficticios. No exponer la aplicación a Internet.
 
 #+begin_src bash
+export LAB_PASSWORD="$(openssl rand -hex 12)"
+export LAB_USER_PASSWORD="$LAB_PASSWORD"
+
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r app/requirements.txt
 
 # Terminal 1: versión vulnerable
-LAB_USER_PASSWORD='ContraseñaDeLaboratorio' lab/run.sh vulnerable 5000
+lab/run.sh vulnerable 5000
 
 # Terminal 2: versión corregida + monitoreo
-LAB_USER_PASSWORD='ContraseñaDeLaboratorio' lab/run.sh secure 5001
+lab/run.sh secure 5001
 
 # Terminal 3: pruebas y evidencias
-LAB_PASSWORD='ContraseñaDeLaboratorio' python3 lab/pruebas/probar.py
+python3 lab/pruebas/probar.py
+python3 lab/pruebas/verificar_controles.py
 #+end_src
 
 La contraseña y la clave de sesión se pasan por variable de entorno y *no* se guardan en el
-repositorio. Si no se definen, la aplicación genera valores efímeros y los imprime en la
-terminal. Los archivos =app/lab_*.sqlite3= y =logs/= se ignoran en Git.
+repositorio. El ejemplo anterior genera una contraseña aleatoria en la sesión de la shell:
+las dos aplicaciones y las dos pruebas comparten el mismo valor sin escribirlo en un archivo.
+Si no se definen, la aplicación genera valores efímeros y los imprime en la terminal.
+Los archivos =app/lab_*.sqlite3= y =logs/= se ignoran en Git.
 
 * Estructura
 
@@ -32,9 +38,10 @@ terminal. Los archivos =app/lab_*.sqlite3= y =logs/= se ignoran en Git.
 | =app/static/style.css=      | Estilos de la aplicación                                         |
 | =lab/run.sh=                | Arranque de cada modo con base de datos independiente             |
 | =lab/pruebas/probar.py=     | Pruebas manuales repetibles y generación de evidencias            |
+| =lab/pruebas/verificar_controles.py= | Verificación de CSRF, cabeceras y regresión de IDOR      |
 | =lab/monitoreo/reglas.json= | Reglas de correlación del mecanismo de detección                  |
 | =lab/zap/=                  | Instalación, escaneo e informes de OWASP ZAP                      |
-| =evidencias/texto/=         | Resultados antes/después de cada vulnerabilidad y de los registros|
+| =evidencias/texto/=         | Resultados antes/después, registros y controles adicionales       |
 | =capturas/documento/=       | Capturas usadas en =INFORME.org=                                  |
 | =capturas/presentacion/=    | Capturas para la presentación ejecutiva (no incluida aquí)        |
 | =scripts/capturar.sh=       | Capturas con =grim= y =slurp=                                     |
@@ -43,7 +50,8 @@ terminal. Los archivos =app/lab_*.sqlite3= y =logs/= se ignoran en Git.
 | =scripts/ipc_geometria.sh=  | Verifica la geometría de dwl mediante su protocolo IPC             |
 | =app/static/presentacion.css= | Tema blanco/azul oscuro activo con =?tema=ejecutivo=               |
 | =scripts/exportar.sh=       | Exportación de =INFORME.org= a =INFORME.pdf=                      |
-| =INFORME.org=               | Informe técnico en formato Org                                    |
+| =INFORME.org=               | Informe técnico en formato Org (fuente de =INFORME.pdf=)           |
+| =GUIA_PRESENTACION.org=     | Explicación desde cero de las instrucciones y guion de defensa     |
 
 * Modo vulnerable
 
@@ -57,12 +65,20 @@ terminal. Los archivos =app/lab_*.sqlite3= y =logs/= se ignoran en Git.
 - Autoescape de Jinja y cabecera =Content-Security-Policy=.
 - Autorización por =owner_id= o rol =socio=, con denegación por defecto.
 - Registro JSON de eventos, correlación por reglas y panel =/alertas= (Opción B).
+- Token anti-CSRF por sesión en =/login= y =/comentarios=; se valida con
+  =hmac.compare_digest= y se registra =CSRF_RECHAZADO=.
+- Cabeceras =Cache-Control: no-store=, =Permissions-Policy= y
+  =Cross-Origin-Resource-Policy= además de CSP y =X-Frame-Options=.
 
 * Evidencias
 
-Las evidencias de texto se regeneran con =lab/pruebas/probar.py=. Los informes de ZAP se
-generan con =lab/zap/scan.sh=. Las capturas se toman con =scripts/capturar.sh=; el modo
-interactivo usa =grim -g "$(slurp)"= y el modo automático acepta una geometría explícita.
+Las evidencias de texto de las tres vulnerabilidades y los registros se regeneran con
+=lab/pruebas/probar.py=. La evidencia de los controles añadidos se regenera con
+=lab/pruebas/verificar_controles.py=. Los informes de ZAP se generan con
+=lab/zap/scan.sh=; los incluidos corresponden al escaneo original y no se han vuelto a
+ejecutar tras añadir el token anti-CSRF. Las capturas se toman con
+=scripts/capturar.sh=; el modo interactivo usa =grim -g "$(slurp)"= y el modo automático
+acepta una geometría explícita.
 
 Las capturas de =capturas/documento/= ilustran el informe (endpoints, tres
 vulnerabilidades antes/después, ZAP y el panel de alertas). Las de
@@ -74,8 +90,19 @@ La comparación ZAP antes/después se regenera con:
 #+begin_src bash
 lab/zap/scan.sh http://127.0.0.1:5000 evidencias/zap
 lab/zap/scan.sh http://127.0.0.1:5001 evidencias/zap/secure
-LAB_PASSWORD='ContraseñaDeLaboratorio' scripts/capturar_figuras.sh
+scripts/capturar_figuras.sh
 #+end_src
+
+* Notas de la revisión publicada
+
+- El repositorio remoto es
+  [[https://github.com/KEROJAM/Proyecto-Final-Cyberseguridad][KEROJAM/Proyecto-Final-Cyberseguridad]].
+- =INFORME.pdf= es la exportación original de =INFORME.org= (15 páginas). Tras añadir
+  los controles anti-CSRF y de cabeceras, la *fuente de verdad* es =INFORME.org=; el PDF
+  debe regenerarse con =scripts/exportar.sh= en un entorno con Emacs/Org, LaTeX y la
+  plantilla =~/Documents/Clases/sample.tex=.
+- =GUIA_PRESENTACION.org= resume las instrucciones, qué se hizo en cada actividad y un
+  guion para exponer el trabajo sin conocerlo de antemano.
 
 * Seguridad de la entrega
 

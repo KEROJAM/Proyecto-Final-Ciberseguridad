@@ -1,5 +1,5 @@
 ========================================================================
-Evidencia generada: 2026-11-24T23:46:21.112323+00:00
+Evidencia generada: 2026-11-25T18:41:03.865034+00:00
 Entorno: laboratorio local autorizado · datos ficticios
 ========================================================================
 
@@ -13,18 +13,18 @@ Eventos en memoria: 17
 Conteo por tipo: {"ACCESO_DENEGADO": 4, "ACCESO_PERMITIDO": 2, "LOGIN_FALLIDO": 3, "LOGIN_OK": 4, "SQLI_DETECTADO": 2, "XSS_DETECTADO": 2}
 
 Alertas correlacionadas:
-  AL-7D7FFD24 · Fallos de autenticación concentrados · severidad=medio · 3/3 eventos en 60s
-  AL-2844539F · Intentos de acceso no autorizado a recursos · severidad=medio · 4/2 eventos en 60s
-  AL-0BC7F98A · Posible XSS enviado a comentarios · severidad=alto · 2/1 eventos en 60s
-  AL-9945A175 · Posible inyección SQL detectada · severidad=alto · 2/1 eventos en 60s
+  AL-ED2C242C · Fallos de autenticación concentrados · severidad=medio · 3/3 eventos en 60s
+  AL-656D881F · Intentos de acceso no autorizado a recursos · severidad=medio · 4/2 eventos en 60s
+  AL-F9760B21 · Posible XSS enviado a comentarios · severidad=alto · 2/1 eventos en 60s
+  AL-0A93CA21 · Posible inyección SQL detectada · severidad=alto · 2/1 eventos en 60s
 
 Muestra de eventos (últimos 6):
-  23:46:21 ACCESO_DENEGADO  alto    a_auxiliar   /expediente/2 -> 403
-  23:46:21 ACCESO_DENEGADO  alto    a_auxiliar   /expediente/1 -> 403
-  23:46:21 XSS_DETECTADO    alto    s_tio        /comentarios -> 200
-  23:46:21 SQLI_DETECTADO   alto    anónimo      /buscar -> 200
-  23:46:21 LOGIN_FALLIDO    medio   anónimo      /login -> 401
-  23:46:21 LOGIN_FALLIDO    medio   anónimo      /login -> 401
+  18:41:03 ACCESO_DENEGADO  alto    a_auxiliar   /expediente/2 -> 403
+  18:41:03 ACCESO_DENEGADO  alto    a_auxiliar   /expediente/1 -> 403
+  18:41:03 XSS_DETECTADO    alto    s_tio        /comentarios -> 200
+  18:41:03 SQLI_DETECTADO   alto    anónimo      /buscar -> 200
+  18:41:03 LOGIN_FALLIDO    medio   s_tio        /login -> 401
+  18:41:03 LOGIN_FALLIDO    medio   s_tio        /login -> 401
 
 Lectura para detección: los patrones SQLi/XSS se registran aunque el ataque
 sea bloqueado; los fallos de login y las denegaciones se correlacionan por
