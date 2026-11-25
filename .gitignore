@@ -21,5 +21,6 @@ __pycache__/
 tools/zap/
 
 # Generados por scripts/exportar.sh
-INFORME.tex
+INFORME.pdf
+'Proyecto final de Ciberseguridad.html'
 INFORME_v2.pdf
