@@ -546,9 +546,10 @@ lab/zap/scan.sh http://127.0.0.1:5001 evidencias/zap/secure
 scripts/exportar.sh   # requiere Emacs/Org, LaTeX y ~/Documents/Clases/sample.tex
 #+end_src
 
-=INFORME.pdf= es la exportación de la versión original (15 páginas). Después de este
-cierre de brechas la fuente de verdad es =INFORME.org=; el PDF debe regenerarse con el
-comando anterior cuando el entorno LaTeX esté disponible.
+=INFORME.pdf= es la exportación actualizada de =INFORME.org= (16 páginas) e incluye
+el cierre de brechas descrito en este apartado. La fuente de verdad sigue siendo
+=INFORME.org=; vuelva a exportar con el comando anterior cuando el entorno LaTeX esté
+disponible y el documento cambie.
 
 ** B. Índice de evidencias
 

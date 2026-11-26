@@ -175,8 +175,8 @@ quedarse aislado."
 - *¿Qué marcos normativos se tocan?* LFPDPPP y GDPR por los datos personales de clientes;
   NIST/ISO 27001 se pueden mencionar como referencia para registro, control de acceso y
   respuesta, pero el informe no alega certificación.
-- *¿El PDF está actualizado?* =INFORME.pdf= es la exportación original de 15 páginas.
-  La fuente con los cambios nuevos es =INFORME.org=; hay que reexportarlo con
+- *¿El PDF está actualizado?* Sí: =INFORME.pdf= tiene 16 páginas y ya incluye el
+  cierre de brechas. La fuente de verdad es =INFORME.org=; reexpórtalo con
   =scripts/exportar.sh= si está disponible Emacs/Org + LaTeX + la plantilla local.
 
 * 7. Comandos útiles para la defensa en vivo

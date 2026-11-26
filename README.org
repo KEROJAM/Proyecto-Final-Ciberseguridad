@@ -97,8 +97,8 @@ scripts/capturar_figuras.sh
 
 - El repositorio remoto es
   [[https://github.com/KEROJAM/Proyecto-Final-Cyberseguridad][KEROJAM/Proyecto-Final-Cyberseguridad]].
-- =INFORME.pdf= es la exportación original de =INFORME.org= (15 páginas). Tras añadir
-  los controles anti-CSRF y de cabeceras, la *fuente de verdad* es =INFORME.org=; el PDF
+- =INFORME.pdf= es la exportación actualizada de =INFORME.org= (16 páginas) e incluye
+  los controles anti-CSRF y de cabeceras. La *fuente de verdad* es =INFORME.org=; el PDF
   debe regenerarse con =scripts/exportar.sh= en un entorno con Emacs/Org, LaTeX y la
   plantilla =~/Documents/Clases/sample.tex=.
 - =GUIA_PRESENTACION.org= resume las instrucciones, qué se hizo en cada actividad y un
