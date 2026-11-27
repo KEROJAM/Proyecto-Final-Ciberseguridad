@@ -4,6 +4,8 @@
 * Inicio rápido
 
 Todo se ejecuta en =127.0.0.1= con datos ficticios. No exponer la aplicación a Internet.
+El portal simula la gestión de expedientes de un despacho jurídico: *todas las vistas
+piden sesión* en los dos modos; =/login=, =/logout=, =/health= y =/static/= son públicos.
 
 #+begin_src bash
 export LAB_PASSWORD="$(openssl rand -hex 12)"
@@ -27,7 +29,10 @@ La contraseña y la clave de sesión se pasan por variable de entorno y *no* se 
 repositorio. El ejemplo anterior genera una contraseña aleatoria en la sesión de la shell:
 las dos aplicaciones y las dos pruebas comparten el mismo valor sin escribirlo en un archivo.
 Si no se definen, la aplicación genera valores efímeros y los imprime en la terminal.
-Los archivos =app/lab_*.sqlite3= y =logs/= se ignoran en Git.
+Los archivos =app/lab_*.sqlite3= y =logs/= se ignoran en Git. Al abrir cualquier ruta
+sin sesión se redirige a =/login?next=<ruta>=; el límite por defecto es 10 intentos de
+login por IP y minuto y se puede elevar solo para regenerar capturas con
+=LAB_LOGIN_LIMIT= en el entorno de los servidores.
 
 * Estructura
 
@@ -45,7 +50,7 @@ Los archivos =app/lab_*.sqlite3= y =logs/= se ignoran en Git.
 | =capturas/documento/=       | Capturas usadas en =INFORME.org=                                  |
 | =capturas/presentacion/=    | Capturas para la presentación ejecutiva (no incluida aquí)        |
 | =scripts/capturar.sh=       | Capturas con =grim= y =slurp=                                     |
-| =scripts/capturar_figuras.sh= | Regenera las 14 capturas a pantalla completa con el tema ejecutivo |
+| =scripts/capturar_figuras.sh= | Regenera las 19 capturas a pantalla completa con el tema ejecutivo |
 | =scripts/ver_app.py=        | Ventana Qt a pantalla completa para las capturas                   |
 | =scripts/ipc_geometria.sh=  | Verifica la geometría de dwl mediante su protocolo IPC             |
 | =app/static/presentacion.css= | Tema blanco/azul oscuro activo con =?tema=ejecutivo=               |
@@ -56,13 +61,19 @@ Los archivos =app/lab_*.sqlite3= y =logs/= se ignoran en Git.
 * Modo vulnerable
 
 - =GET /buscar?q=...=: concatena el parámetro en la consulta SQL (SQLi).
-- =POST /comentarios= + =GET /comentarios=: marca el contenido como seguro con =|safe= (XSS).
+- =POST /login=: usuario ~s_tio' -- ~ entra como socio sin contraseña válida (SQLi).
+- =POST /comentarios= + =GET /comentarios?expediente_id=<id>=: la nota pertenece a un
+  expediente y el contenido se marca como seguro con =|safe= (XSS).
 - =GET /expediente/<id>= y =GET /api/expediente/<id>=: sin verificación de propiedad (IDOR/BOLA).
+  El expediente 6 es el asunto reservado del socio usado en la demostración.
+- La puerta de login solo autentica; las debilidades siguen reproducibles una vez dentro.
 
 * Modo corregido
 
-- Consultas =LIKE ?= parametrizadas y validación de longitud.
-- Autoescape de Jinja y cabecera =Content-Security-Policy=.
+- Puerta =exigir_login= en =before_request= para toda la app; redirección =next= validada.
+- Consultas =LIKE ?= parametrizadas y validación de longitud; =/login= consulta por
+  =username=? y comprueba =password_hash= con =check_password_hash=.
+- Autoescape de Jinja y cabecera =Content-Security-Policy=; notas filtradas por =expediente_id=.
 - Autorización por =owner_id= o rol =socio=, con denegación por defecto.
 - Registro JSON de eventos, correlación por reglas y panel =/alertas= (Opción B).
 - Token anti-CSRF por sesión en =/login= y =/comentarios=; se valida con
@@ -76,12 +87,15 @@ Las evidencias de texto de las tres vulnerabilidades y los registros se regenera
 =lab/pruebas/probar.py=. La evidencia de los controles añadidos se regenera con
 =lab/pruebas/verificar_controles.py=. Los informes de ZAP se generan con
 =lab/zap/scan.sh=; los incluidos corresponden al escaneo original y no se han vuelto a
-ejecutar tras añadir el token anti-CSRF. Las capturas se toman con
+ejecutar tras añadir el token anti-CSRF ni la puerta de login global. El guion de ZAP
+no configura autenticación: para un escaneo nuevo hace falta configurar una sesión o
+autenticación de formulario y alcanzar las páginas internas. Las capturas se toman con
 =scripts/capturar.sh=; el modo interactivo usa =grim -g "$(slurp)"= y el modo automático
 acepta una geometría explícita.
 
-Las capturas de =capturas/documento/= ilustran el informe (endpoints, tres
-vulnerabilidades antes/después, ZAP y el panel de alertas). Las de
+Las capturas de =capturas/documento/= ilustran el informe (login, SQLi en búsqueda
+y en acceso, XSS, IDOR/BOLA antes/después, ZAP y el panel de alertas). El usuario
+activo aparece en la esquina superior derecha. Las de
 =capturas/presentacion/= son un subconjunto preparado para la presentación
 ejecutiva, que no se incluye en este entregable.
 
@@ -90,14 +104,22 @@ La comparación ZAP antes/después se regenera con:
 #+begin_src bash
 lab/zap/scan.sh http://127.0.0.1:5000 evidencias/zap
 lab/zap/scan.sh http://127.0.0.1:5001 evidencias/zap/secure
-scripts/capturar_figuras.sh
+#+end_src
+
+Para regenerar las capturas, los servidores deben arrancar con =LAB_LOGIN_LIMIT= alto
+(cada captura inicia sesión) y luego ejecutar:
+
+#+begin_src bash
+LAB_LOGIN_LIMIT=100 lab/run.sh vulnerable 5000
+LAB_LOGIN_LIMIT=100 lab/run.sh secure 5001
+LAB_PASSWORD="$LAB_PASSWORD" scripts/capturar_figuras.sh
 #+end_src
 
 * Notas de la revisión publicada
 
 - El repositorio remoto es
   [[https://github.com/KEROJAM/Proyecto-Final-Cyberseguridad][KEROJAM/Proyecto-Final-Cyberseguridad]].
-- =INFORME.pdf= es la exportación actualizada de =INFORME.org= (16 páginas) e incluye
+- =INFORME.pdf= es la exportación actualizada de =INFORME.org= (19 páginas) e incluye
   los controles anti-CSRF y de cabeceras. La *fuente de verdad* es =INFORME.org=; el PDF
   debe regenerarse con =scripts/exportar.sh= en un entorno con Emacs/Org, LaTeX y la
   plantilla =~/Documents/Clases/sample.tex=.

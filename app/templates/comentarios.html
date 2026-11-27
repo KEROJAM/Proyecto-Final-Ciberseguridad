@@ -1,21 +1,33 @@
 {% extends "base.html" %}
-{% block title %}Comentarios{% endblock %}
+{% block title %}Notas del expediente {{ expediente.id }}{% endblock %}
 {% block content %}
 <section class="card">
-  <h1>Comentarios del despacho</h1>
+  <h1>Notas del expediente #{{ expediente.id }}</h1>
+  <p><strong>{{ expediente.cliente }}</strong> ·
+     <a href="{{ url_for('expediente', expediente_id=expediente.id) }}">Ver ficha del asunto</a></p>
   {% if modo == 'vulnerable' %}
   <p class="warn">El contenido se marca como seguro con <code>|safe</code>: se ejecuta el HTML/JavaScript enviado.</p>
   {% else %}
   <p class="ok">Autoescape de Jinja + CSP: el contenido se muestra como texto, nunca se ejecuta.</p>
   {% endif %}
+
+  <nav class="selector" aria-label="Expedientes disponibles">
+    {% for e in visibles %}
+      <a href="{{ url_for('comentarios', expediente_id=e.id) }}"
+         {% if e.id == expediente.id %}aria-current="page"{% endif %}>#{{ e.id }} · {{ e.cliente }}</a>
+    {% endfor %}
+  </nav>
+
   <form method="post">
+    <input type="hidden" name="expediente_id" value="{{ expediente.id }}">
     {% if modo == 'secure' %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% endif %}
-    <label>Nuevo comentario
-      <textarea name="texto" rows="3" placeholder="Escriba un comentario"></textarea>
+    <label>Nueva nota del caso
+      <textarea name="texto" rows="3" placeholder="Diligencia, fecha de audiencia, acuerdo con el cliente…"></textarea>
     </label>
-    <button type="submit">Publicar</button>
+    <button type="submit">Añadir nota</button>
   </form>
-  <h2>Publicaciones recientes</h2>
+
+  <h2>Notas registradas</h2>
   <div class="comments">
     {% for c in comentarios %}
     <article class="comment">

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Portal de expedientes{% endblock %} · Ramírez &amp; Asociados</title>
+  <title>{% block title %}Gestión de expedientes{% endblock %} · Ramírez &amp; Asociados</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   {% if tema == 'ejecutivo' %}
   <link rel="stylesheet" href="{{ url_for('static', filename='presentacion.css') }}">
@@ -15,31 +15,39 @@
       <span class="mark">R&amp;A</span>
       <div>
         <strong>Ramírez &amp; Asociados, S.C.</strong>
-        <small>Portal de expedientes · laboratorio aislado</small>
+        <small>Despacho jurídico · gestión de expedientes</small>
       </div>
     </div>
     <nav>
       <a href="{{ url_for('indice') }}">Inicio</a>
-      <a href="{{ url_for('buscar') }}">Buscar</a>
-      <a href="{{ url_for('comentarios') }}">Comentarios</a>
-      <a href="{{ url_for('alertas') }}">Alertas</a>
+      <a href="{{ url_for('buscar') }}">Expedientes</a>
+      <a href="{{ url_for('comentarios') }}">Notas</a>
+      <a href="{{ url_for('alertas') }}">Seguridad</a>
       {% if session.get('usuario') %}
-        <span class="user">{{ session.get('usuario') }} ({{ session.get('rol') }})</span>
         <a href="{{ url_for('logout') }}">Salir</a>
       {% else %}
-        <a class="button" href="{{ url_for('login') }}">Iniciar sesión</a>
+        <a class="button" href="{{ url_for('login') }}">Acceder</a>
       {% endif %}
     </nav>
+    {% if session.get('usuario') %}
+    <div class="user-chip" aria-label="Sesión activa">
+      <span class="user-avatar">{{ session.get('usuario')[0]|upper }}</span>
+      <span class="user-datos">
+        <strong>{{ session.get('usuario') }}</strong>
+        <small>{{ session.get('rol') }}</small>
+      </span>
+    </div>
+    {% endif %}
   </header>
   <div class="mode mode-{{ modo }}">
-    Modo de laboratorio: <strong>{{ 'VULNERABLE' if modo == 'vulnerable' else 'CORREGIDO + MONITORIZADO' }}</strong>
-    — datos ficticios, sin exposición a la red
+    Entorno de demostración: <strong>{{ 'VULNERABLE' if modo == 'vulnerable' else 'CORREGIDO + MONITORIZADO' }}</strong>
+    — expedientes ficticios, sin exposición a la red
   </div>
   <main>
     {% block content %}{% endblock %}
   </main>
   <footer>
-    Proyecto final de Ciberseguridad · entorno autorizado · ningún dato real
+    Ramírez &amp; Asociados, S.C. · despacho ficticio · proyecto final de ciberseguridad
   </footer>
 </body>
 </html>

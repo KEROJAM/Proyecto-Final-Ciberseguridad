@@ -2,13 +2,15 @@
 {% block title %}Monitoreo y alertas{% endblock %}
 {% block content %}
 <section class="card">
-  <h1>Monitoreo y detección</h1>
-  <p>Eventos de seguridad generados por la aplicación y correlacionados con reglas de
-     <code>lab/monitoreo/reglas.json</code>. Vista restringida al perfil socio en el modo corregido.</p>
+  <h1>Seguridad del portal</h1>
+  <p>Eventos del despacho correlacionados con reglas de
+     <code>lab/monitoreo/reglas.json</code>: accesos sin sesión, intentos de abrir
+     expedientes ajenos y notas con contenido sospechoso. Vista restringida al socio
+     en el modo corregido.</p>
   <div class="metrics">
     <div><strong>{{ alertas|length }}</strong><span>alertas activas</span></div>
     <div><strong>{{ eventos|length }}</strong><span>eventos en memoria</span></div>
-    <div><strong>{{ total_comentarios }}</strong><span>comentarios almacenados</span></div>
+    <div><strong>{{ total_comentarios }}</strong><span>notas registradas</span></div>
   </div>
 </section>
 

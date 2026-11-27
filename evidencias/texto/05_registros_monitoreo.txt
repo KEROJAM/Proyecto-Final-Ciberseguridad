@@ -1,30 +1,31 @@
 ========================================================================
-Evidencia generada: 2026-11-25T18:41:03.865034+00:00
+Evidencia generada: 2026-11-27T00:08:30.893529+00:00
 Entorno: laboratorio local autorizado · datos ficticios
 ========================================================================
 
 ACTIVIDAD 5 Y PARTE B · ANÁLISIS DE REGISTROS Y DETECCIÓN
-Eventos controlados generados: 3 login fallidos, 1 patrón SQLi, 1 patrón XSS,
-2 accesos denegados a expedientes ajenos.
+Eventos controlados generados: accesos sin sesión, 3 login fallidos,
+patrones SQLi en búsqueda y login, 1 patrón XSS, 2 accesos denegados,
+1 nota con contenido sospechoso.
 
 GET /api/alertas -> 200
 GET /alertas (panel HTML) -> 200
-Eventos en memoria: 17
-Conteo por tipo: {"ACCESO_DENEGADO": 4, "ACCESO_PERMITIDO": 2, "LOGIN_FALLIDO": 3, "LOGIN_OK": 4, "SQLI_DETECTADO": 2, "XSS_DETECTADO": 2}
+Eventos en memoria: 22
+Conteo por tipo: {"ACCESO_DENEGADO": 4, "ACCESO_NO_AUTENTICADO": 1, "ACCESO_PERMITIDO": 2, "COMENTARIO_PUBLICADO": 2, "LOGIN_FALLIDO": 4, "LOGIN_OK": 4, "SQLI_DETECTADO": 3, "XSS_DETECTADO": 2}
 
 Alertas correlacionadas:
-  AL-ED2C242C · Fallos de autenticación concentrados · severidad=medio · 3/3 eventos en 60s
-  AL-656D881F · Intentos de acceso no autorizado a recursos · severidad=medio · 4/2 eventos en 60s
-  AL-F9760B21 · Posible XSS enviado a comentarios · severidad=alto · 2/1 eventos en 60s
-  AL-0A93CA21 · Posible inyección SQL detectada · severidad=alto · 2/1 eventos en 60s
+  AL-0EB2DC08 · Fallos de autenticación concentrados · severidad=medio · 4/3 eventos en 60s
+  AL-5A08F840 · Intentos de acceso no autorizado a recursos · severidad=medio · 4/2 eventos en 60s
+  AL-15DE67D5 · Posible XSS enviado a comentarios · severidad=alto · 2/1 eventos en 60s
+  AL-9F49C745 · Posible inyección SQL detectada · severidad=alto · 3/1 eventos en 60s
 
 Muestra de eventos (últimos 6):
-  18:41:03 ACCESO_DENEGADO  alto    a_auxiliar   /expediente/2 -> 403
-  18:41:03 ACCESO_DENEGADO  alto    a_auxiliar   /expediente/1 -> 403
-  18:41:03 XSS_DETECTADO    alto    s_tio        /comentarios -> 200
-  18:41:03 SQLI_DETECTADO   alto    anónimo      /buscar -> 200
-  18:41:03 LOGIN_FALLIDO    medio   s_tio        /login -> 401
-  18:41:03 LOGIN_FALLIDO    medio   s_tio        /login -> 401
+  00:08:30 ACCESO_DENEGADO  alto    a_auxiliar   /expediente/2 -> 403
+  00:08:30 ACCESO_DENEGADO  alto    a_auxiliar   /expediente/1 -> 403
+  00:08:30 COMENTARIO_PUBLICADO bajo    s_tio        /comentarios -> 302
+  00:08:30 XSS_DETECTADO    alto    s_tio        /comentarios -> 200
+  00:08:30 SQLI_DETECTADO   alto    s_tio        /buscar -> 200
+  00:08:30 LOGIN_FALLIDO    medio   s_tio        /login -> 401
 
 Lectura para detección: los patrones SQLi/XSS se registran aunque el ataque
 sea bloqueado; los fallos de login y las denegaciones se correlacionan por

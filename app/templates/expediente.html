@@ -2,18 +2,22 @@
 {% block title %}Expediente {{ expediente.id }}{% endblock %}
 {% block content %}
 <section class="card narrow">
-  <h1>Expediente #{{ expediente.id }}</h1>
+  <h1>Expediente #{{ expediente.id }} · {{ expediente.cliente }}</h1>
   <dl>
     <dt>Cliente</dt><dd>{{ expediente.cliente }}</dd>
-    <dt>Descripción</dt><dd>{{ expediente.descripcion }}</dd>
-    <dt>Importe</dt><dd>${{ '%.2f'|format(expediente.importe) }}</dd>
-    <dt>Propietario</dt><dd>{{ expediente.username }}</dd>
+    <dt>Asunto</dt><dd>{{ expediente.descripcion }}</dd>
+    <dt>Honorarios</dt><dd>${{ '%.2f'|format(expediente.importe) }}</dd>
+    <dt>Abogado responsable</dt><dd>{{ expediente.username }}</dd>
   </dl>
   {% if modo == 'vulnerable' %}
-  <p class="warn">Sin verificación de propiedad: cualquier usuario autenticado ve este expediente.</p>
+  <p class="warn">IDOR: sin verificación de propiedad, cualquier usuario autenticado ve esta ficha.</p>
+  <p class="warn">BOLA: el mismo objeto se entrega sin autorización en
+    <a href="{{ url_for('api_expediente', expediente_id=expediente.id) }}">/api/expediente/{{ expediente.id }}</a>.</p>
   {% else %}
-  <p class="ok">Autorización verificada en servidor: propietario o rol socio.</p>
+  <p class="ok">Autorización verificada en servidor: responsable del asunto o socio,
+    tanto en la ficha como en la API.</p>
   {% endif %}
-  <a href="{{ url_for('buscar') }}">Volver a la búsqueda</a>
+  <p><a href="{{ url_for('comentarios', expediente_id=expediente.id) }}">Ver y añadir notas del expediente</a></p>
+  <a href="{{ url_for('buscar') }}">Volver a la consulta</a>
 </section>
 {% endblock %}

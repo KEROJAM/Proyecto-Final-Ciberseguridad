@@ -3,15 +3,15 @@
 {% block content %}
 <section class="hero">
   <h1>Portal de expedientes del despacho</h1>
-  <p>Aplicación Flask de laboratorio usada para demostrar, corregir y validar
-     SQL Injection, XSS y control de acceso roto (IDOR/BOLA), además de un
-     mecanismo de monitoreo y detección.</p>
-  <p class="note">La organización es ficticia: <strong>Ramírez &amp; Asociados, S.C.</strong>,
-     despacho de contabilidad, nómina y asesoría legal.</p>
+  <p>Consulta de asuntos, registro de notas de trabajo y revisión de la actividad del
+     despacho. El acceso es obligatorio para todo el personal: socio, abogados y
+     asistentes ven solo lo que su perfil les permite.</p>
+  <p class="note">Organización ficticia: <strong>Ramírez &amp; Asociados, S.C.</strong>,
+     despacho jurídico que atiende asuntos fiscales, laborales y corporativos.</p>
 </section>
 
 <section class="card">
-  <h2>Endpoints disponibles</h2>
+  <h2>Áreas del portal</h2>
   <table>
     <thead><tr><th>Ruta</th><th>Función</th></tr></thead>
     <tbody>
@@ -23,12 +23,16 @@
 </section>
 
 <section class="card">
-  <h2>Pruebas rápidas</h2>
-  <ul>
-    <li>SQLi: <code>/buscar?q=Delta' OR '1'='1</code></li>
-    <li>XSS: publicar <code>&lt;script&gt;alert('XSS')&lt;/script&gt;</code> en comentarios</li>
-    <li>IDOR: iniciar sesión como <code>a_auxiliar</code> y abrir <code>/expediente/1</code></li>
-  </ul>
+  <h2>Recorrido de demostración</h2>
+  <ol>
+    <li>En el modo vulnerable escriba <code>s_tio' -- </code> como usuario y cualquier
+      contraseña: la consulta de login se manipula y entra como socio.</li>
+    <li>Busque un cliente con <code>Delta' OR '1'='1</code> para observar el SQLi.</li>
+    <li>Acceda como <code>a_auxiliar</code> (asistente) y abra el expediente <code>6</code>:
+      en el modo vulnerable verá el asunto reservado del socio (IDOR/BOLA).</li>
+    <li>Deje una nota en un expediente con
+      <code>&lt;script&gt;alert('XSS')&lt;/script&gt;</code> para observar el XSS.</li>
+  </ol>
   <p class="note">Las credenciales se entregan en el entorno de ejecución, nunca en el repositorio.</p>
 </section>
 {% endblock %}

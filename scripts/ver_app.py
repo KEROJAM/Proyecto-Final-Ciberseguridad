@@ -9,6 +9,7 @@ Variables opcionales:
   LAB_READY_FILE     archivo marcador que se escribe cuando la página terminó
                      de cargar y pintar; evita dormir un tiempo fijo.
   LAB_ZOOM           factor de zoom (por ejemplo 1.1).
+  LAB_SESSION_COOKIE cookie de sesión ya obtenida (para capturas tras SQLi).
 
 La contraseña se lee de LAB_PASSWORD y nunca se guarda. La ventana permanece
 abierta hasta que se cierra el proceso.
@@ -41,6 +42,9 @@ def main() -> None:
         raise SystemExit("Defina LAB_PASSWORD para iniciar sesión")
 
     session = requests.Session()
+    cookie_value = os.environ.get("LAB_SESSION_COOKIE", "")
+    if usuario and cookie_value:
+        raise SystemExit("Use usuario o LAB_SESSION_COOKIE, no ambos")
     if usuario:
         parsed = urlparse(url)
         base = f"{parsed.scheme}://{parsed.netloc}"
@@ -76,7 +80,7 @@ def main() -> None:
     if zoom:
         view.setZoomFactor(float(zoom))
 
-    cookie_value = session.cookies.get("session")
+    cookie_value = cookie_value or session.cookies.get("session")
     if cookie_value:
         cookie = QNetworkCookie(b"session", cookie_value.encode())
         parsed = urlparse(url)

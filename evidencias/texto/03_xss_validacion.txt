@@ -1,11 +1,11 @@
 ========================================================================
-Evidencia generada: 2026-11-25T18:41:03.383939+00:00
+Evidencia generada: 2026-11-27T00:08:30.421339+00:00
 Entorno: laboratorio local autorizado · datos ficticios
 ========================================================================
 
 ACTIVIDAD 2/4 · CROSS-SITE SCRIPTING (XSS)
 Payload publicado: <script>alert('XSS-PROYECTO-FINAL')</script>
-Endpoint: POST/GET /comentarios
+Endpoint: POST/GET /comentarios?expediente_id=1 (nota ligada al expediente 1)
 
 [ANTES · modo vulnerable]
   GET /comentarios -> 200

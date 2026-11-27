@@ -99,19 +99,24 @@ def main() -> None:
     # 3. El formulario de comentarios también exige token.
     token_comentario = token_csrf(s, base, "/comentarios")
     sin_token_com = s.post(
-        base + "/comentarios", data={"texto": "Comentario sin token"}, timeout=10
+        base + "/comentarios",
+        data={"expediente_id": 1, "texto": "Nota sin token"}, timeout=10
     )
     con_token_com = s.post(
         base + "/comentarios",
-        data={"texto": "Comentario autorizado con token CSRF", "csrf_token": token_comentario},
+        data={
+            "expediente_id": 1,
+            "texto": "Nota autorizada con token CSRF",
+            "csrf_token": token_comentario,
+        },
         timeout=10,
     )
-    vista = s.get(base + "/comentarios", timeout=10)
+    vista = s.get(base + "/comentarios", params={"expediente_id": 1}, timeout=10)
     lineas += [
         "[3] Formulario de comentarios",
         f"  POST /comentarios sin token -> {sin_token_com.status_code}",
         f"  POST /comentarios con token  -> {con_token_com.status_code}",
-        f"  Comentario autorizado visible: {'Comentario autorizado con token CSRF' in vista.text}",
+        f"  Nota autorizada visible: {'Nota autorizada con token CSRF' in vista.text}",
         "",
     ]
 
@@ -125,12 +130,23 @@ def main() -> None:
     # 5. Regresión de la corrección de IDOR/BOLA.
     aux = requests.Session()
     iniciar(aux, base, "a_auxiliar", password)
-    idor = aux.get(base + "/expediente/1", timeout=10)
-    idor_api = aux.get(base + "/api/expediente/1", timeout=10)
+    idor = aux.get(base + "/expediente/6", timeout=10)
+    idor_api = aux.get(base + "/api/expediente/6", timeout=10)
+    bypass = aux.post(
+        base + "/login",
+        data={
+            "username": "s_tio' -- ",
+            "password": "no-importa",
+            "csrf_token": token_csrf(aux, base, "/comentarios"),
+        },
+        timeout=10,
+        allow_redirects=True,
+    )
     lineas += [
         "[5] Regresión de autorización",
-        f"  a_auxiliar -> /expediente/1     -> {idor.status_code} (esperado 403)",
-        f"  a_auxiliar -> /api/expediente/1 -> {idor_api.status_code} (esperado 403)",
+        f"  a_auxiliar -> /expediente/6     -> {idor.status_code} (esperado 403)",
+        f"  a_auxiliar -> /api/expediente/6 -> {idor_api.status_code} (esperado 403)",
+        f"  SQLi en login con token CSRF   -> {bypass.status_code} (esperado 401)",
         "",
     ]
 

@@ -1,20 +1,20 @@
 {% extends "base.html" %}
-{% block title %}Buscar expedientes{% endblock %}
+{% block title %}Consulta de expedientes{% endblock %}
 {% block content %}
 <section class="card">
-  <h1>Búsqueda de expedientes</h1>
+  <h1>Consulta de expedientes</h1>
   <form method="get" class="inline">
-    <input name="q" value="{{ q }}" placeholder="Nombre del cliente o payload de prueba">
+    <input name="q" value="{{ q }}" placeholder="Cliente, asunto o número de expediente">
     <button type="submit">Buscar</button>
   </form>
   {% if modo == 'vulnerable' %}
   <p class="warn">Esta versión concatena la entrada en la consulta SQL. Pruebe
      <code>Delta' OR '1'='1</code> para observar el comportamiento inseguro.</p>
   {% else %}
-  <p class="ok">Consulta parametrizada: el payload se trata como texto literal.</p>
+  <p class="ok">Consulta parametrizada: el texto buscado se trata como dato literal.</p>
   {% endif %}
   <table>
-    <thead><tr><th>ID</th><th>Cliente</th><th>Descripción</th><th>Importe</th></tr></thead>
+    <thead><tr><th>Exp.</th><th>Cliente</th><th>Asunto</th><th>Honorarios</th></tr></thead>
     <tbody>
       {% for r in resultados %}
       <tr>
@@ -24,10 +24,10 @@
         <td>${{ '%.2f'|format(r.importe) }}</td>
       </tr>
       {% else %}
-      <tr><td colspan="4">Sin resultados para {{ q or '(vacío)' }}.</td></tr>
+      <tr><td colspan="4">Sin expedientes para {{ q or '(vacío)' }}.</td></tr>
       {% endfor %}
     </tbody>
   </table>
-  <p class="note">Filas devueltas: {{ resultados|length }}</p>
+  <p class="note">Expedientes devueltos: {{ resultados|length }}</p>
 </section>
 {% endblock %}

@@ -22,6 +22,7 @@ ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "evidencias" / "texto"
 XSS = "<script>alert('XSS-PROYECTO-FINAL')</script>"
 SQLI = "Delta' OR '1'='1' --"
+SQLI_LOGIN = "s_tio' -- "
 
 
 def guardar(nombre: str, lineas: list[str]) -> None:
@@ -67,8 +68,8 @@ def login(base: str, password: str, usuario: str, seguro: bool = False) -> reque
 
 
 def publicar(s: requests.Session, base: str, texto: str, seguro: bool = False):
-    """Publica un comentario; en modo seguro adjunta el token de la sesión."""
-    datos = {"texto": texto}
+    """Publica una nota en el expediente 1; en modo seguro adjunta el token CSRF."""
+    datos = {"expediente_id": 1, "texto": texto}
     if seguro:
         datos["csrf_token"] = token_csrf(s, base, "/comentarios")
     return s.post(f"{base}/comentarios", data=datos, timeout=10)
@@ -85,14 +86,25 @@ def main() -> None:
         raise SystemExit("Defina LAB_PASSWORD con la contraseña de laboratorio")
 
     vuln, seg = args.vulnerable.rstrip("/"), args.secure.rstrip("/")
+    sv = login(vuln, password, "s_tio")
+    ss = login(seg, password, "s_tio", seguro=True)
 
     # --- Actividad 1: entornos y endpoints ---------------------------------
     lineas = ["ACTIVIDAD 1 · PREPARACIÓN Y VERIFICACIÓN DE ENDPOINTS", ""]
-    for nombre, base in (("VULNERABLE", vuln), ("CORREGIDO", seg)):
+    lineas += [
+        "Acceso global: las rutas de aplicación redirigen a /login sin sesión;",
+        "las peticiones siguientes usan una sesión autenticada.",
+        "",
+    ]
+    for nombre, base, sesion in (("VULNERABLE", vuln, sv), ("CORREGIDO", seg, ss)):
         lineas.append(f"[{nombre}] base={base}")
-        for ruta in ("/", "/health", "/login", "/buscar?q=Delta", "/comentarios"):
-            r = requests.get(base + ruta, timeout=10)
-            lineas.append(f"  GET {ruta:<22} -> {r.status_code}  ({len(r.content)} bytes)")
+        for ruta in ("/", "/health", "/login", "/buscar?q=Delta",
+                     "/comentarios?expediente_id=1"):
+            r = sesion.get(base + ruta, timeout=10)
+            lineas.append(f"  GET {ruta:<26} -> {r.status_code}  ({len(r.content)} bytes)")
+        sin_sesion = requests.get(base + "/", timeout=10, allow_redirects=False)
+        lineas.append(f"  GET / sin sesión -> {sin_sesion.status_code} "
+                      f"(redirige a {sin_sesion.headers.get('Location', '?')})")
         h = requests.get(base + "/health", timeout=10).json()
         lineas.append(f"  /health JSON: {json.dumps(h, ensure_ascii=False)}")
         lineas.append("")
@@ -101,16 +113,17 @@ def main() -> None:
     # --- SQLi ---------------------------------------------------------------
     base_lineas = [
         "ACTIVIDAD 2/4 · SQL INJECTION",
-        f"Payload: q={SQLI}",
-        "Endpoint: GET /buscar",
+        f"Payload en búsqueda: q={SQLI}",
+        f"Payload en login: usuario={SQLI_LOGIN!r} · contraseña arbitraria",
+        "Endpoints: GET /buscar y POST /login",
         "",
     ]
-    rv = requests.get(f"{vuln}/buscar", params={"q": SQLI}, timeout=10)
+    rv = sv.get(f"{vuln}/buscar", params={"q": SQLI}, timeout=10)
     lineas = base_lineas + [
         "[ANTES · modo vulnerable]",
         f"  URL: {rv.url}",
         f"  Estado HTTP: {rv.status_code}",
-        f"  Filas devueltas: {filas(rv.text)} (esperado vulnerable: 5)",
+        f"  Filas devueltas: {filas(rv.text)} (esperado vulnerable: 6)",
         "  Fragmento de la respuesta:",
     ]
     lineas += ["    " + l.strip() for l in rv.text.splitlines() if "expediente/" in l][:6]
@@ -120,7 +133,7 @@ def main() -> None:
         "  todos los expedientes, incluidos los que no coinciden con 'Delta'.",
         "",
     ]
-    rs = requests.get(f"{seg}/buscar", params={"q": SQLI}, timeout=10)
+    rs = ss.get(f"{seg}/buscar", params={"q": SQLI}, timeout=10)
     lineas += [
         "[DESPUÉS · modo corregido]",
         f"  URL: {rs.url}",
@@ -129,17 +142,44 @@ def main() -> None:
         "  Mensaje visible: " + ("Sin resultados" if "Sin resultados" in rs.text else "revisar"),
         "  Cambio aplicado: consulta parametrizada con LIKE ? y límite de longitud.",
         "  Riesgo reducido: el payload se trata como dato, no como código SQL.",
+        "",
+    ]
+
+    # Inyección en el propio formulario de acceso (autenticación bypass).
+    bypass = requests.Session()
+    rv_login = bypass.post(
+        f"{vuln}/login",
+        data={"username": SQLI_LOGIN, "password": "no-importa"},
+        timeout=10,
+        allow_redirects=True,
+    )
+    entro = "s_tio" in rv_login.text and "Salir" in rv_login.text
+    intento_seguro = requests.Session()
+    datos_login = {"username": SQLI_LOGIN, "password": "no-importa"}
+    datos_login["csrf_token"] = token_csrf(intento_seguro, seg, "/login")
+    rs_login = intento_seguro.post(
+        f"{seg}/login", data=datos_login, timeout=10, allow_redirects=True
+    )
+    lineas += [
+        "[LOGIN · modo vulnerable]",
+        f"  POST /login con usuario {SQLI_LOGIN!r} -> {rv_login.status_code}",
+        f"  Sesión iniciada sin contraseña válida: {entro}",
+        "  Observación: la concatenación SQL comentó la comparación de contraseña.",
+        "",
+        "[LOGIN · modo corregido]",
+        f"  POST /login con el mismo payload -> {rs_login.status_code}",
+        f"  Sesión iniciada: {'s_tio' in rs_login.text and 'Salir' in rs_login.text}",
+        "  Cambio aplicado: consulta parametrizada y verificación de password_hash.",
     ]
     guardar("02_sqli_validacion.txt", lineas)
 
     # --- XSS ----------------------------------------------------------------
-    sv = login(vuln, password, "s_tio")
     publicar(sv, vuln, XSS)
-    rv = sv.get(f"{vuln}/comentarios", timeout=10)
+    rv = sv.get(f"{vuln}/comentarios", params={"expediente_id": 1}, timeout=10)
     lineas = [
         "ACTIVIDAD 2/4 · CROSS-SITE SCRIPTING (XSS)",
         f"Payload publicado: {XSS}",
-        "Endpoint: POST/GET /comentarios",
+        "Endpoint: POST/GET /comentarios?expediente_id=1 (nota ligada al expediente 1)",
         "",
         "[ANTES · modo vulnerable]",
         f"  GET /comentarios -> {rv.status_code}",
@@ -148,9 +188,8 @@ def main() -> None:
         "  Observación: el navegador interpreta la etiqueta como JavaScript.",
         "",
     ]
-    ss = login(seg, password, "s_tio", seguro=True)
     publicar(ss, seg, XSS, seguro=True)
-    rs = ss.get(f"{seg}/comentarios", timeout=10)
+    rs = ss.get(f"{seg}/comentarios", params={"expediente_id": 1}, timeout=10)
     lineas += [
         "[DESPUÉS · modo corregido]",
         f"  GET /comentarios -> {rs.status_code}",
@@ -164,31 +203,31 @@ def main() -> None:
 
     # --- IDOR / BOLA --------------------------------------------------------
     av = login(vuln, password, "a_auxiliar")
-    rv = av.get(f"{vuln}/expediente/1", timeout=10)
-    rv_api = av.get(f"{vuln}/api/expediente/1", timeout=10)
+    rv = av.get(f"{vuln}/expediente/6", timeout=10)
+    rv_api = av.get(f"{vuln}/api/expediente/6", timeout=10)
     lineas = [
         "ACTIVIDAD 2/4 · CONTROL DE ACCESO ROTO (IDOR/BOLA)",
         "Endpoint: GET /expediente/<id> y GET /api/expediente/<id>",
-        "Usuario autenticado: a_auxiliar · recurso solicitado: expediente 1 (propietario s_tio)",
+        "Usuario autenticado: a_auxiliar · recurso solicitado: expediente 6 (reservado al socio s_tio)",
         "",
         "[ANTES · modo vulnerable]",
-        f"  GET /expediente/1 -> {rv.status_code}",
-        f"  Datos ajenos visibles: {'Constructora Delta' in rv.text and 's_tio' in rv.text}",
-        f"  GET /api/expediente/1 -> {rv_api.status_code} {rv_api.text[:160]}",
+        f"  GET /expediente/6 -> {rv.status_code}",
+        f"  Datos ajenos visibles: {'Inversiones Ébano' in rv.text and 's_tio' in rv.text}",
+        f"  GET /api/expediente/6 -> {rv_api.status_code} {rv_api.text[:160]}",
         "  Observación: no hay comprobación de propiedad ni de rol en el servidor.",
         "",
     ]
     aa = login(seg, password, "a_auxiliar", seguro=True)
-    ra = aa.get(f"{seg}/expediente/1", timeout=10)
-    ra_api = aa.get(f"{seg}/api/expediente/1", timeout=10)
+    ra = aa.get(f"{seg}/expediente/6", timeout=10)
+    ra_api = aa.get(f"{seg}/api/expediente/6", timeout=10)
     propio = aa.get(f"{seg}/expediente/5", timeout=10)
-    admin = login(seg, password, "s_tio", seguro=True).get(f"{seg}/expediente/1", timeout=10)
+    admin = login(seg, password, "s_tio", seguro=True).get(f"{seg}/expediente/6", timeout=10)
     lineas += [
         "[DESPUÉS · modo corregido]",
-        f"  GET /expediente/1 como a_auxiliar -> {ra.status_code} (esperado 403)",
-        f"  GET /api/expediente/1 como a_auxiliar -> {ra_api.status_code} {ra_api.text[:120]}",
+        f"  GET /expediente/6 como a_auxiliar -> {ra.status_code} (esperado 403)",
+        f"  GET /api/expediente/6 como a_auxiliar -> {ra_api.status_code} {ra_api.text[:120]}",
         f"  GET /expediente/5 (propio) -> {propio.status_code} (esperado 200)",
-        f"  GET /expediente/1 como s_tio -> {admin.status_code} (esperado 200)",
+        f"  GET /expediente/6 como s_tio -> {admin.status_code} (esperado 200)",
         "  Cambio aplicado: autorización por owner_id o rol socio antes de entregar el recurso.",
         "  Riesgo reducido: denegación por defecto y registro del intento.",
     ]
@@ -207,7 +246,7 @@ def main() -> None:
             },
             timeout=10,
         )
-    requests.get(f"{seg}/buscar", params={"q": SQLI}, timeout=10)
+    ss.get(f"{seg}/buscar", params={"q": SQLI}, timeout=10)
     publicar(ses, seg, XSS, seguro=True)
     aa.get(f"{seg}/expediente/1", timeout=10)
     aa.get(f"{seg}/expediente/2", timeout=10)
@@ -218,8 +257,9 @@ def main() -> None:
         tipos[e["tipo"]] = tipos.get(e["tipo"], 0) + 1
     lineas = [
         "ACTIVIDAD 5 Y PARTE B · ANÁLISIS DE REGISTROS Y DETECCIÓN",
-        "Eventos controlados generados: 3 login fallidos, 1 patrón SQLi, 1 patrón XSS,",
-        "2 accesos denegados a expedientes ajenos.",
+        "Eventos controlados generados: accesos sin sesión, 3 login fallidos,",
+        "patrones SQLi en búsqueda y login, 1 patrón XSS, 2 accesos denegados,",
+        "1 nota con contenido sospechoso.",
         "",
         f"GET /api/alertas -> {ses.get(f'{seg}/api/alertas', timeout=10).status_code}",
         f"GET /alertas (panel HTML) -> {panel.status_code}",

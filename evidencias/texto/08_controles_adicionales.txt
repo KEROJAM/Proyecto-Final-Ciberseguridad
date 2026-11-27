@@ -15,7 +15,7 @@ Entorno: laboratorio local autorizado · datos ficticios
 [3] Formulario de comentarios
   POST /comentarios sin token -> 403
   POST /comentarios con token  -> 200
-  Comentario autorizado visible: True
+  Nota autorizada visible: True
 
 [4] Cabeceras de respuesta (GET /comentarios)
   Content-Security-Policy: default-src 'self'; script-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'
@@ -27,14 +27,15 @@ Entorno: laboratorio local autorizado · datos ficticios
   Cross-Origin-Resource-Policy: same-origin
 
 [5] Regresión de autorización
-  a_auxiliar -> /expediente/1     -> 403 (esperado 403)
-  a_auxiliar -> /api/expediente/1 -> 403 (esperado 403)
+  a_auxiliar -> /expediente/6     -> 403 (esperado 403)
+  a_auxiliar -> /api/expediente/6 -> 403 (esperado 403)
+  SQLi en login con token CSRF   -> 401 (esperado 401)
 
 [6] Registro y detección
-  GET /api/alertas -> 200; eventos en memoria: 23
+  GET /api/alertas -> 200; eventos en memoria: 31
   CSRF_RECHAZADO registrados: 2
   Alertas CSRF-001: 1
-    AL-17D1D218 · severidad=alto · 2/1 eventos en 60s
+    AL-92F0A70A · severidad=alto · 2/1 eventos en 60s
 
 Conclusión: el modo seguro exige un token imprevisible por sesión en cada
 cambio de estado, no almacena respuestas sensibles en caché y conserva la
@@ -44,4 +45,4 @@ alta en lugar de pasar desapercibidos.
 Nota: el informe ZAP incluido en el repo corresponde al escaneo original;
 esta verificación es manual/automatizada y no sustituye un nuevo escaneo.
 
-Generado: 2026-11-25T18:41:04.116199+00:00
+Generado: 2026-11-27T00:08:31.175589+00:00

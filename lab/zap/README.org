@@ -55,7 +55,7 @@ Resultado: ZAP arrancó, completó spider y active scan y generó los tres archi
 
 * Limitaciones
 
-- No hay escaneo autenticado: no se configuran login, sesión ni CSRF tokens. La app debe permitir acceso anónimo o ampliarse el script.
+- No hay escaneo autenticado: no se configuran login, sesión ni CSRF tokens. La app exige sesión en todas sus vistas, por lo que los informes incluidos corresponden a la revisión anterior a esa puerta; un escaneo nuevo necesita configurar autenticación de formulario en ZAP.
 - No se ejecuta Ajax Spider; páginas muy dependientes de JavaScript pueden quedar poco cubiertas.
 - El active scan envía peticiones potencialmente modificadoras (formularios, parámetros). Ejecutar solo contra una instancia descartable de la app vulnerable.
 - El alcance es la URL base y su subárbol. Otros hosts no se escanean.

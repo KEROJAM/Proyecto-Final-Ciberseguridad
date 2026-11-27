@@ -22,6 +22,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from threading import Lock
 from typing import Any
+from urllib.parse import urlsplit
 
 from flask import (
     Flask,
@@ -74,6 +75,8 @@ PATRON_XSS = re.compile(
     re.IGNORECASE,
 )
 CSRF_CAMPO = "csrf_token"
+# Acceso global: solo estas rutas se sirven sin sesión, en ambos modos.
+RUTAS_PUBLICAS = frozenset({"/login", "/logout", "/health", "/favicon.ico"})
 
 
 # ---------------------------------------------------------------------------
@@ -100,7 +103,9 @@ def init_db() -> None:
                 id INTEGER PRIMARY KEY,
                 username TEXT UNIQUE NOT NULL,
                 rol TEXT NOT NULL,
-                password_hash TEXT NOT NULL
+                password_hash TEXT NOT NULL,
+                -- Solo para la demo de inyección SQL en /login del modo vulnerable.
+                password TEXT NOT NULL
             );
             CREATE TABLE IF NOT EXISTS expedientes (
                 id INTEGER PRIMARY KEY,
@@ -111,19 +116,37 @@ def init_db() -> None:
             );
             CREATE TABLE IF NOT EXISTS comentarios (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                expediente_id INTEGER NOT NULL REFERENCES expedientes(id),
                 usuario TEXT NOT NULL,
                 texto TEXT NOT NULL,
                 creado TEXT NOT NULL
             );
             """
         )
+        # Migraciones ligeras para bases creadas antes de añadir la demo de
+        # SQLi en /login y la asociación de notas a expedientes.
+        columnas_usuarios = {
+            fila["name"] for fila in conn.execute("PRAGMA table_info(usuarios)")
+        }
+        if "password" not in columnas_usuarios:
+            conn.execute("ALTER TABLE usuarios ADD COLUMN password TEXT")
+            conn.execute("UPDATE usuarios SET password = ?", (password,))
+        columnas = {
+            fila["name"] for fila in conn.execute("PRAGMA table_info(comentarios)")
+        }
+        if "expediente_id" not in columnas:
+            conn.execute(
+                "ALTER TABLE comentarios ADD COLUMN expediente_id "
+                "INTEGER NOT NULL DEFAULT 1 REFERENCES expedientes(id)"
+            )
         if conn.execute("SELECT COUNT(*) FROM usuarios").fetchone()[0] == 0:
             conn.executemany(
-                "INSERT INTO usuarios (id, username, rol, password_hash) VALUES (?,?,?,?)",
+                "INSERT INTO usuarios "
+                "(id, username, rol, password_hash, password) VALUES (?,?,?,?,?)",
                 [
-                    (1, "s_tio", "socio", hash_usuarios),
-                    (2, "c_contador", "contador", hash_usuarios),
-                    (3, "a_auxiliar", "auxiliar", hash_usuarios),
+                    (1, "s_tio", "socio", hash_usuarios, password),
+                    (2, "c_contador", "abogado", hash_usuarios, password),
+                    (3, "a_auxiliar", "asistente", hash_usuarios, password),
                 ],
             )
         if conn.execute("SELECT COUNT(*) FROM expedientes").fetchone()[0] == 0:
@@ -138,12 +161,38 @@ def init_db() -> None:
                     (5, 3, "Distribuidora Este", "Facturas por revisar", 2150.0),
                 ],
             )
+        # Asunto reservado al socio: permite mostrar IDOR (ficha HTML) y BOLA
+        # (API del mismo objeto) con un expediente claramente ajeno al asistente.
+        if not conn.execute("SELECT 1 FROM expedientes WHERE id = 6").fetchone():
+            conn.execute(
+                "INSERT INTO expedientes (id, owner_id, cliente, descripcion, importe) "
+                "VALUES (?,?,?,?,?)",
+                (
+                    6, 1, "Inversiones Ébano",
+                    "Due diligence confidencial · asunto reservado al socio", 15800.0,
+                ),
+            )
         if conn.execute("SELECT COUNT(*) FROM comentarios").fetchone()[0] == 0:
             conn.execute(
-                "INSERT INTO comentarios (usuario, texto, creado) VALUES (?,?,?)",
+                "INSERT INTO comentarios (expediente_id, usuario, texto, creado) "
+                "VALUES (?,?,?,?)",
                 (
+                    1,
                     "s_tio",
-                    "Bienvenidos al portal de expedientes del despacho.",
+                    "Nota inicial del expediente: revisar la declaración fiscal.",
+                    datetime.now(timezone.utc).isoformat(),
+                ),
+            )
+        if not conn.execute(
+            "SELECT 1 FROM comentarios WHERE expediente_id = 6"
+        ).fetchone():
+            conn.execute(
+                "INSERT INTO comentarios (expediente_id, usuario, texto, creado) "
+                "VALUES (?,?,?,?)",
+                (
+                    6,
+                    "s_tio",
+                    "Nota reservada: revisar la cláusula de confidencialidad.",
                     datetime.now(timezone.utc).isoformat(),
                 ),
             )
@@ -268,6 +317,22 @@ def login_required(view):
     return wrapped
 
 
+def _destino_seguro(destino: str | None) -> str:
+    """Evita redirecciones abiertas tras el login."""
+    if destino:
+        destino = destino.strip()
+        partes = urlsplit(destino)
+        if (
+            destino.startswith("/")
+            and not destino.startswith("//")
+            and not partes.scheme
+            and not partes.netloc
+            and "\\" not in destino
+        ):
+            return destino
+    return url_for("indice")
+
+
 # ---------------------------------------------------------------------------
 # Cabeceras y control de acceso
 # ---------------------------------------------------------------------------
@@ -288,6 +353,25 @@ def cabeceras(respuesta):
         # intencional: sin CSP para permitir la demostración de XSS
         respuesta.headers["X-Lab-Mode"] = "vulnerable"
     return respuesta
+
+
+@app.before_request
+def exigir_login():
+    """Puerta de acceso global, en los dos modos.
+
+    El modo vulnerable sigue siéndolo: la autenticación solo decide quién entra,
+    no corrige SQLi, XSS ni la autorización por objeto.
+    """
+    if request.endpoint == "static" or request.path in RUTAS_PUBLICAS:
+        return None
+    if usuario_actual() is not None:
+        return None
+    destino = request.full_path if request.query_string else request.path
+    registrar_evento(
+        "ACCESO_NO_AUTENTICADO", "medio",
+        f"Solicitud sin sesión a {request.path}", estado=302,
+    )
+    return redirect(url_for("login", next=destino))
 
 
 @app.before_request
@@ -318,7 +402,9 @@ def limitar_login():
     ip = request.remote_addr or "desconocida"
     con = _intentos_login.setdefault(ip, [])
     con[:] = [t for t in con if (ahora - t).total_seconds() < 60]
-    if len(con) >= 10:
+    # Valor por defecto 10; se puede subir solo para la generación de capturas.
+    limite = int(os.environ.get("LAB_LOGIN_LIMIT", "10"))
+    if len(con) >= limite:
         registrar_evento(
             "RATE_LIMIT",
             "medio",
@@ -360,12 +446,12 @@ def indice():
         "indice.html",
         modo=MODO,
         endpoint=[
-            ("/", "Índice de endpoints"),
-            ("/login", "Inicio de sesión"),
-            ("/buscar?q=", "Búsqueda de expedientes (SQLi)"),
-            ("/expediente/<id>", "Detalle de expediente (IDOR/BOLA)"),
-            ("/comentarios", "Comentarios (XSS)"),
-            ("/alertas", "Panel de monitoreo (Opción B)"),
+            ("/", "Inicio del portal"),
+            ("/login", "Acceso del personal (SQLi en vulnerable)"),
+            ("/buscar?q=", "Consulta de expedientes (SQLi)"),
+            ("/expediente/<id>", "Ficha del asunto (IDOR/BOLA)"),
+            ("/comentarios?expediente_id=", "Notas del expediente (XSS)"),
+            ("/alertas", "Seguridad del portal (Opción B)"),
             ("/health", "Estado del servicio"),
         ],
     )
@@ -381,21 +467,49 @@ def login():
     if request.method == "POST":
         username = request.form.get("username", "")
         password = request.form.get("password", "")
+        if PATRON_SQLI.search(username) or PATRON_SQLI.search(password):
+            registrar_evento(
+                "SQLI_DETECTADO", "alto",
+                f"Patrón de inyección SQL en /login: {username[:80]!r}",
+                estado=401,
+            )
         with conectar() as conn:
-            fila = conn.execute(
-                "SELECT * FROM usuarios WHERE username = ?", (username,)
-            ).fetchone()
-        valido = bool(fila and check_password_hash(fila["password_hash"], password))
+            if MODO == "vulnerable":
+                # VULNERABILIDAD 4: concatenación directa en la autenticación.
+                # 's_tio' --  comenta la comparación de contraseña y entra sin clave.
+                sql = (
+                    "SELECT * FROM usuarios WHERE username = "
+                    f"'{username}' AND password = '{password}'"
+                )
+                fila = conn.execute(sql).fetchone()
+                valido = bool(fila)
+            else:
+                # CORRECCIÓN 4: parámetros + verificación del hash.
+                fila = conn.execute(
+                    "SELECT * FROM usuarios WHERE username = ?", (username,)
+                ).fetchone()
+                valido = bool(
+                    fila and check_password_hash(fila["password_hash"], password)
+                )
         if valido:
             session.clear()
+            if MODO == "secure":
+                # Rotación del token anti-CSRF al cambiar de identidad.
+                session[CSRF_CAMPO] = secrets.token_urlsafe(32)
             session["uid"] = fila["id"]
             session["usuario"] = fila["username"]
             session["rol"] = fila["rol"]
             registrar_evento("LOGIN_OK", "bajo", "Inicio de sesión correcto", estado=200)
-            return redirect(url_for("indice"))
+            return redirect(_destino_seguro(request.form.get("next")))
         registrar_evento("LOGIN_FALLIDO", "medio", "Credenciales rechazadas", estado=401)
-        return render_template("login.html", modo=MODO, error="Credenciales inválidas"), 401
-    return render_template("login.html", modo=MODO, error=None)
+        return render_template(
+            "login.html", modo=MODO, error="Credenciales inválidas",
+            next=request.form.get("next", ""), prefill=username,
+        ), 401
+    return render_template(
+        "login.html", modo=MODO, error=None,
+        next=request.args.get("next", ""), prefill=request.args.get("u", ""),
+    )
 
 
 @app.route("/logout")
@@ -497,13 +611,48 @@ def api_expediente(expediente_id: int):
 
 @app.route("/comentarios", methods=["GET", "POST"])
 def comentarios():
+    """Notas adjuntas a un expediente; ya no es un buzón genérico."""
+    usuario = usuario_actual()
+    id_solicitado = request.values.get("expediente_id", type=int)
+    with conectar() as conn:
+        visibles = [
+            dict(f)
+            for f in conn.execute(
+                "SELECT id, owner_id, cliente FROM expedientes ORDER BY id"
+            )
+            if MODO != "secure" or puede_leer_expediente(f, usuario)
+        ]
+        # La entrada desde la barra de navegación abre el primer asunto que el
+        # usuario puede ver; las notas siempre pertenecen a un expediente.
+        if id_solicitado is None:
+            if request.method == "POST":
+                abort(400)
+            if not visibles:
+                abort(404)
+            return redirect(url_for("comentarios", expediente_id=visibles[0]["id"]))
+        expediente_id = id_solicitado
+        expediente = conn.execute(
+            "SELECT id, owner_id, cliente FROM expedientes WHERE id = ?",
+            (expediente_id,),
+        ).fetchone()
+    if expediente is None:
+        abort(404)
+    if MODO == "secure" and not puede_leer_expediente(expediente, usuario):
+        registrar_evento(
+            "ACCESO_DENEGADO", "alto",
+            f"Comentarios del expediente {expediente_id} denegados", estado=403,
+        )
+        abort(403)
+    if expediente is None:
+        abort(404)
+
     if request.method == "POST":
         texto = request.form.get("texto", "")
         if PATRON_XSS.search(texto):
             registrar_evento(
-                "XSS_DETECTADO",
-                "alto",
-                f"Etiqueta o handler sospechoso en comentario: {texto[:120]!r}",
+                "XSS_DETECTADO", "alto",
+                f"Etiqueta o handler sospechoso en comentario del expediente "
+                f"{expediente_id}: {texto[:120]!r}",
                 estado=200,
             )
         if MODO == "secure" and len(texto) > 500:
@@ -513,22 +662,32 @@ def comentarios():
             abort(400)
         with conectar() as conn:
             conn.execute(
-                "INSERT INTO comentarios (usuario, texto, creado) VALUES (?,?,?)",
+                "INSERT INTO comentarios "
+                "(expediente_id, usuario, texto, creado) VALUES (?,?,?,?)",
                 (
+                    expediente_id,
                     session.get("usuario", "anónimo"),
                     texto,
                     datetime.now(timezone.utc).isoformat(),
                 ),
             )
-        return redirect(url_for("comentarios"))
+        registrar_evento(
+            "COMENTARIO_PUBLICADO", "bajo",
+            f"Comentario añadido al expediente {expediente_id}", estado=302,
+        )
+        return redirect(url_for("comentarios", expediente_id=expediente_id))
+
     with conectar() as conn:
         filas = conn.execute(
-            "SELECT id, usuario, texto, creado FROM comentarios ORDER BY id DESC LIMIT 20"
+            "SELECT id, usuario, texto, creado FROM comentarios "
+            "WHERE expediente_id = ? ORDER BY id DESC LIMIT 20",
+            (expediente_id,),
         ).fetchall()
     # VULNERABILIDAD 2: en modo vulnerable la plantilla usa |safe.
     # CORRECCIÓN 2: en modo seguro se usa autoescape de Jinja + CSP.
     return render_template(
-        "comentarios.html", modo=MODO, comentarios=[dict(f) for f in filas]
+        "comentarios.html", modo=MODO, comentarios=[dict(f) for f in filas],
+        expediente=dict(expediente), visibles=visibles,
     )
 
 

@@ -13,6 +13,7 @@ TMP=/tmp/opencode/proyecto-final
 mkdir -p "$TMP" capturas/documento capturas/presentacion evidencias/texto
 READY="$TMP/ready_captura"
 SQLI='Delta%27%20OR%20%271%27%3D%271%27%20--'
+SQLI_LOGIN='s_tio%27%20--%20'
 ZAP="file://$BASE/evidencias/zap/zap_report.html"
 
 # El XSS de las pruebas automáticas es una etiqueta <script> (no deja texto
@@ -26,9 +27,9 @@ token = re.search(r'name="csrf_token"\s+value="([^"]+)"',
 if token:
     datos['csrf_token'] = token.group(1)
 s.post('http://127.0.0.1:5000/login', data=datos, timeout=10)
-datos = {'texto': "<img src=x onerror=\"this.insertAdjacentHTML('afterend','<h2 style=color:#ff8292>XSS EJECUTADO EN EL NAVEGADOR</h2>')\">"}
+datos = {'expediente_id': 1, 'texto': "<img src=x onerror=\"this.insertAdjacentHTML('afterend','<h2 style=color:#ff8292>XSS EJECUTADO EN EL NAVEGADOR</h2>')\">"}
 token = re.search(r'name="csrf_token"\s+value="([^"]+)"',
-                  s.get('http://127.0.0.1:5000/comentarios', timeout=10).text)
+                  s.get('http://127.0.0.1:5000/comentarios?expediente_id=1', timeout=10).text)
 if token:
     datos['csrf_token'] = token.group(1)
 s.post('http://127.0.0.1:5000/comentarios', data=datos, timeout=10)
@@ -51,6 +52,23 @@ cerrar() {
 }
 trap cerrar EXIT
 
+# La inyección en /login del modo vulnerable devuelve una sesión de socio sin
+# contraseña; se usa solo para la captura de evidencia, nunca se guarda en disco.
+SQLI_COOKIE=$(python3 - <<'PY'
+import requests
+s = requests.Session()
+r = s.post(
+    'http://127.0.0.1:5000/login',
+    data={'username': "s_tio' -- ", 'password': 'demo'},
+    timeout=10,
+    allow_redirects=True,
+)
+if r.status_code != 200 or 's_tio' not in r.text:
+    raise SystemExit('No se pudo demostrar la inyección SQL en /login')
+print(s.cookies.get('session', ''))
+PY
+)
+
 con_tema() {
   case "$1" in
     *\?*) printf '%s&tema=ejecutivo\n' "$1" ;;
@@ -59,25 +77,39 @@ con_tema() {
 }
 
 cap() {
-  local archivo="$1" url="$2" usuario="${3:-}"
-  rm -f "$READY"
-  cerrar
-  if [[ -n "$usuario" ]]; then
-    LAB_READY_FILE="$READY" python3 scripts/ver_app.py "$url" "$usuario" \
-      > "$TMP/ver_app.log" 2>&1 &
-  else
-    LAB_READY_FILE="$READY" python3 scripts/ver_app.py "$url" \
-      > "$TMP/ver_app.log" 2>&1 &
-  fi
-  PID=$!
-  if ! timeout 25 bash -c "until [ -f '$READY' ]; do sleep 0.2; done"; then
-    echo "ERROR: la página no terminó de cargar: $url" >&2
-    cat "$TMP/ver_app.log" >&2
-    exit 1
-  fi
-  local estado geom
-  estado=$(cat "$READY")
-  geom=$(scripts/ipc_geometria.sh || printf 'IPC_NO_DISPONIBLE')
+  local archivo="$1" url="$2" usuario="${3:-}" cookie="${4:-}"
+  local estado geom intento
+  for intento in 1 2; do
+    rm -f "$READY"
+    cerrar
+    if [[ -n "$cookie" ]]; then
+      LAB_SESSION_COOKIE="$cookie" LAB_READY_FILE="$READY" \
+        python3 scripts/ver_app.py "$url" > "$TMP/ver_app.log" 2>&1 &
+    elif [[ -n "$usuario" ]]; then
+      LAB_READY_FILE="$READY" python3 scripts/ver_app.py "$url" "$usuario" \
+        > "$TMP/ver_app.log" 2>&1 &
+    else
+      LAB_READY_FILE="$READY" python3 scripts/ver_app.py "$url" \
+        > "$TMP/ver_app.log" 2>&1 &
+    fi
+    PID=$!
+    if ! timeout 25 bash -c "until [ -f '$READY' ]; do sleep 0.2; done"; then
+      echo "ERROR: la página no terminó de cargar: $url" >&2
+      cat "$TMP/ver_app.log" >&2
+      exit 1
+    fi
+    estado=$(cat "$READY")
+    # El compositor puede tardar en enfocar y aplicar el fullscreen.
+    sleep 1
+    geom=$(scripts/ipc_geometria.sh || printf 'IPC_NO_DISPONIBLE')
+    for _ in 1 2 3 4 5 6; do
+      [[ "$geom" == '0,0 1920x1080' ]] && break
+      sleep 0.5
+      geom=$(scripts/ipc_geometria.sh || printf 'IPC_NO_DISPONIBLE')
+    done
+    [[ "$geom" == '0,0 1920x1080' ]] && break
+    echo "AVISO: geometría $geom en $archivo (intento $intento); se repite." >&2
+  done
   if [[ "$geom" != '0,0 1920x1080' ]]; then
     echo "AVISO: geometría inesperada ($geom) en $archivo" >&2
   fi
@@ -88,22 +120,27 @@ cap() {
 }
 
 # --- Documento (ilustran INFORME.org) -------------------------------------
-cap capturas/documento/01_endpoints.png       "$(con_tema 'http://127.0.0.1:5000/')"
-cap capturas/documento/02_sqli_vulnerable.png "$(con_tema "http://127.0.0.1:5000/buscar?q=$SQLI")"
-cap capturas/documento/03_xss_vulnerable.png  "$(con_tema 'http://127.0.0.1:5000/comentarios')"
-cap capturas/documento/04_idor_vulnerable.png "$(con_tema 'http://127.0.0.1:5000/expediente/1')" a_auxiliar
-cap capturas/documento/05_zap_hallazgos.png   "$ZAP"
-cap capturas/documento/06_sqli_corregido.png  "$(con_tema "http://127.0.0.1:5001/buscar?q=$SQLI")"
-cap capturas/documento/07_xss_corregido.png   "$(con_tema 'http://127.0.0.1:5001/comentarios')" s_tio
-cap capturas/documento/08_idor_corregido.png  "$(con_tema 'http://127.0.0.1:5001/expediente/1')" a_auxiliar
+cap capturas/documento/00_login_principal.png   "$(con_tema 'http://127.0.0.1:5000/login')"
+cap capturas/documento/00_sqli_login.png        "$(con_tema "http://127.0.0.1:5000/login?u=$SQLI_LOGIN")"
+cap capturas/documento/00_sqli_login_ok.png     "$(con_tema 'http://127.0.0.1:5000/')" '' "$SQLI_COOKIE"
+cap capturas/documento/01_endpoints.png         "$(con_tema 'http://127.0.0.1:5000/')" s_tio
+cap capturas/documento/02_sqli_vulnerable.png   "$(con_tema "http://127.0.0.1:5000/buscar?q=$SQLI")" s_tio
+cap capturas/documento/03_xss_vulnerable.png    "$(con_tema 'http://127.0.0.1:5000/comentarios?expediente_id=1')" s_tio
+cap capturas/documento/04_idor_vulnerable.png   "$(con_tema 'http://127.0.0.1:5000/expediente/6')" a_auxiliar
+cap capturas/documento/05_zap_hallazgos.png     "$ZAP"
+cap capturas/documento/06_sqli_corregido.png    "$(con_tema "http://127.0.0.1:5001/buscar?q=$SQLI")" s_tio
+cap capturas/documento/07_xss_corregido.png     "$(con_tema 'http://127.0.0.1:5001/comentarios?expediente_id=1')" s_tio
+cap capturas/documento/08_idor_corregido.png    "$(con_tema 'http://127.0.0.1:5001/expediente/6')" a_auxiliar
 cap capturas/documento/09_alertas_monitoreo.png "$(con_tema 'http://127.0.0.1:5001/alertas')" s_tio
 
 # --- Presentación (mismo tema ejecutivo, carpetas separadas) --------------
-cap capturas/presentacion/01_contexto.png        "$(con_tema 'http://127.0.0.1:5001/')"
-cap capturas/presentacion/02_vulnerabilidades.png "$(con_tema "http://127.0.0.1:5000/buscar?q=$SQLI")"
-cap capturas/presentacion/03_correciones.png     "$(con_tema "http://127.0.0.1:5001/buscar?q=$SQLI")"
-cap capturas/presentacion/04_monitoreo.png       "$(con_tema 'http://127.0.0.1:5001/alertas')" s_tio
-cap capturas/presentacion/05_hallazgos_zap.png   "$ZAP"
+cap capturas/presentacion/00_login_principal.png    "$(con_tema 'http://127.0.0.1:5000/login')"
+cap capturas/presentacion/00_sqli_login.png         "$(con_tema "http://127.0.0.1:5000/login?u=$SQLI_LOGIN")"
+cap capturas/presentacion/01_contexto.png           "$(con_tema 'http://127.0.0.1:5001/')" s_tio
+cap capturas/presentacion/02_vulnerabilidades.png   "$(con_tema "http://127.0.0.1:5000/buscar?q=$SQLI")" s_tio
+cap capturas/presentacion/03_correciones.png        "$(con_tema "http://127.0.0.1:5001/buscar?q=$SQLI")" s_tio
+cap capturas/presentacion/04_monitoreo.png          "$(con_tema 'http://127.0.0.1:5001/alertas')" s_tio
+cap capturas/presentacion/05_hallazgos_zap.png      "$ZAP"
 
 cerrar
 echo 'Capturas terminadas.'

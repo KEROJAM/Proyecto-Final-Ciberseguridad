@@ -1,24 +1,24 @@
 ========================================================================
-Evidencia generada: 2026-11-25T18:41:03.592559+00:00
+Evidencia generada: 2026-11-27T00:08:30.587261+00:00
 Entorno: laboratorio local autorizado · datos ficticios
 ========================================================================
 
 ACTIVIDAD 2/4 · CONTROL DE ACCESO ROTO (IDOR/BOLA)
 Endpoint: GET /expediente/<id> y GET /api/expediente/<id>
-Usuario autenticado: a_auxiliar · recurso solicitado: expediente 1 (propietario s_tio)
+Usuario autenticado: a_auxiliar · recurso solicitado: expediente 6 (reservado al socio s_tio)
 
 [ANTES · modo vulnerable]
-  GET /expediente/1 -> 200
+  GET /expediente/6 -> 200
   Datos ajenos visibles: True
-  GET /api/expediente/1 -> 200 {"cliente":"Constructora Delta","descripcion":"Declaraci\u00f3n fiscal 2026","id":1,"importe":12500.0,"owner_id":1}
+  GET /api/expediente/6 -> 200 {"cliente":"Inversiones \u00c9bano","descripcion":"Due diligence confidencial \u00b7 asunto reservado al socio","id":6,"importe":15800.0,"owner_id":1}
 
   Observación: no hay comprobación de propiedad ni de rol en el servidor.
 
 [DESPUÉS · modo corregido]
-  GET /expediente/1 como a_auxiliar -> 403 (esperado 403)
-  GET /api/expediente/1 como a_auxiliar -> 403 {"error":"No autorizado"}
+  GET /expediente/6 como a_auxiliar -> 403 (esperado 403)
+  GET /api/expediente/6 como a_auxiliar -> 403 {"error":"No autorizado"}
 
   GET /expediente/5 (propio) -> 200 (esperado 200)
-  GET /expediente/1 como s_tio -> 200 (esperado 200)
+  GET /expediente/6 como s_tio -> 200 (esperado 200)
   Cambio aplicado: autorización por owner_id o rol socio antes de entregar el recurso.
   Riesgo reducido: denegación por defecto y registro del intento.

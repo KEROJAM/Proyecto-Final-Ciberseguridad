@@ -30,14 +30,22 @@ correlación de reglas + panel propio en lugar de importar un SIEM comercial.
 
 La idea central es que *una sola aplicación tiene dos modos*:
 
-- =LAB_MODE=vulnerable= (puerto 5000): conserva a propósito SQLi, XSS e IDOR para poder
-  mostrar el "antes".
-- =LAB_MODE=secure= (puerto 5001): aplica las tres correcciones, añade monitoreo y, en
+- =LAB_MODE=vulnerable= (puerto 5000): conserva a propósito SQLi en búsqueda y en login,
+  XSS e IDOR/BOLA para poder mostrar el "antes".
+- =LAB_MODE=secure= (puerto 5001): aplica las correcciones, añade monitoreo y, en
   esta revisión, token anti-CSRF y cabeceras extra.
 
 Cada modo usa su propia base SQLite y su propio directorio de logs, así que las pruebas
 no se contaminan entre sí. Todo corre en =127.0.0.1= con datos ficticios: clientes,
 RFC, montos y usuarios inventados.
+
+La interfaz se presenta como el portal de expedientes de un despacho jurídico: las
+fichas muestran cliente, asunto, honorarios y abogado responsable, y las notas de
+trabajo están adjuntas a cada asunto; el expediente 6 es un asunto reservado al socio
+para ilustrar IDOR/BOLA. El usuario activo se ve en la esquina superior derecha de
+cada pantalla. *Todas las vistas exigen sesión en los dos modos*; solo =/login=,
+=/logout=, =/health= y =/static/= son públicos. La puerta de acceso no corrige las
+vulnerabilidades: el modo vulnerable sigue explotable una vez dentro.
 
 | Archivo | Para qué sirve | Actividad cubierta |
 |---------+----------------+--------------------|
@@ -50,7 +58,7 @@ RFC, montos y usuarios inventados.
 | =lab/zap/= | Scripts de instalación y escaneo; informes JSON/HTML guardados | 1, 4 |
 | =evidencias/= | Resultados de texto y de ZAP antes/después | 4, 5 |
 | =capturas/= | Imágenes usadas en el informe y en la presentación | Entregables |
-| =INFORME.org= | Informe técnico completo (fuente; =INFORME.pdf= es su exportación original) | Entregable 1 |
+| =INFORME.org= | Informe técnico completo (fuente; =INFORME.pdf= es su exportación) | Entregable 1 |
 | =GUIA_PRESENTACION.org= | Esta guía | Entregable 3 |
 
 * 3. Cómo ejecutarlo en vivo
@@ -70,7 +78,7 @@ python3 lab/pruebas/probar.py
 python3 lab/pruebas/verificar_controles.py
 #+end_src
 
-Usuarios ficticios: =s_tio= (socio), =c_contador= (contador), =a_auxiliar= (auxiliar).
+Usuarios ficticios: =s_tio= (socio), =c_contador= (abogado), =a_auxiliar= (asistente).
 La contraseña la eliges tú en la variable de entorno; no está en el repo. Si no la
 defines, la app genera una efímera y la imprime en la terminal.
 
@@ -95,17 +103,21 @@ Señala =evidencias/texto/01_entorno_endpoints.txt= y el índice =/=.
 
 ** Minuto 3 · SQL Injection
 
-Payload: ~Delta' OR '1'='1' --~ contra =/buscar?q=...=.
+Payloads: ~Delta' OR '1'='1' --~ contra =/buscar?q=...= y ~s_tio' -- ~ en =/login=.
 
 "En el modo vulnerable la entrada se concatenaba dentro del =LIKE=, así que el payload
-cerró la comilla y devolvió los 5 expedientes. En el corregido se usa =LIKE ?= con el
-valor enlazado: el mismo texto se compara literalmente y devuelve 0 filas."
+cerró la comilla y devolvió los 6 expedientes. En =/login=, el segundo payload comentó
+la comparación de contraseña y abrió sesión como socio sin clave válida. En el corregido
+se usan parámetros enlazados y =check_password_hash=: la búsqueda devuelve 0 filas y el
+login devuelve 401."
 
-Números: *5 → 0 filas*. Señala las capturas 02 y 06 y la evidencia 02.
+Números: *6 → 0 filas* y *login bypass → 401*. Señala las capturas 00 (login y SQLi),
+02 y 06, y la evidencia 02. El usuario =s_tio= aparece arriba a la derecha.
 
 ** Minuto 4 · XSS
 
-Payload: =<script>alert('XSS-PROYECTO-FINAL')</script>= publicado en =/comentarios=.
+Payload: =<script>alert('XSS-PROYECTO-FINAL')</script>= publicado como nota del
+expediente 1 en =/comentarios?expediente_id=1=.
 
 "La plantilla vulnerable marcaba el contenido con =|safe=, así que el navegador lo
 ejecutaba. En el corregido Jinja escapa a =&lt;script&gt;= y además la cabecera CSP
@@ -115,10 +127,11 @@ Números: *script ejecutado → escapado + CSP*. Capturas 03 y 07, evidencia 03.
 
 ** Minuto 5 · IDOR/BOLA
 
-"El usuario =a_auxiliar= pedía =/expediente/1=, que es de =s_tio=. Sin verificación de
-propiedad obtenía 200 y los datos. Ahora el servidor compara =owner_id= con la sesión o
-el rol =socio=, y devuelve 403. Lo mismo en la API =/api/expediente/<id>=. El propietario
-y el socio siguen teniendo 200."
+"El usuario =a_auxiliar= pedía =/expediente/6=, el asunto reservado de =s_tio=
+('Inversiones Ébano'). Sin verificación de propiedad obtenía 200 y los datos; en la
+API obtenía el mismo objeto por BOLA. Ahora el servidor compara =owner_id= con la
+sesión o el rol =socio=, y devuelve 403. El propietario y el socio siguen teniendo 200.
+Las capturas muestran =a_auxiliar= en la esquina superior derecha."
 
 Números: *200 → 403*. Capturas 04 y 08, evidencia 04.
 
@@ -155,9 +168,9 @@ quedarse aislado."
 
 | Fallo | Causa raíz | Prueba | Corrección | Por qué funciona |
 |-------+------------+--------+------------+------------------|
-| SQLi (CWE-89) | El parámetro =q= se concatena en la SQL | =Delta' OR '1'='1' --= devuelve 5 filas | =LIKE ?= con parámetro enlazado y límite de 80 caracteres | El motor compila la consulta antes de insertar el dato; las comillas ya no cambian la gramática |
-| XSS (CWE-79) | Filtro =safe= en la plantilla de comentarios | =<script>alert(...)= se ejecuta | Autoescape de Jinja + CSP =default-src 'self'= | Los caracteres se convierten en entidades y CSP es una segunda capa |
-| IDOR/BOLA (CWE-639) | Se busca el recurso por id sin comprobar dueño | =a_auxiliar= lee el expediente 1 → 200 | Autorización en servidor por =owner_id= o rol =socio=, denegación por defecto | La interfaz nunca es la única barrera; la decisión se toma en el servidor |
+| SQLi (CWE-89) | =q= y el usuario de =/login= se concatenan en la SQL | =Delta' OR '1'='1' --= devuelve 6 filas; ~s_tio' -- ~ entra sin contraseña | Parámetros enlazados en =/buscar= y =/login=; =check_password_hash= y límite de 80 caracteres | El motor compila la consulta antes de insertar el dato; las comillas ya no cambian la gramática |
+| XSS (CWE-79) | Filtro =safe= en las notas del expediente | =<script>alert(...)= se ejecuta | Autoescape de Jinja + CSP =default-src 'self'= | Los caracteres se convierten en entidades y CSP es una segunda capa |
+| IDOR/BOLA (CWE-639) | Se busca el recurso por id sin comprobar dueño | =a_auxiliar= lee el expediente 6 (reservado al socio) → 200 | Autorización en servidor por =owner_id= o rol =socio=, denegación por defecto | La interfaz nunca es la única barrera; la decisión se toma en el servidor |
 | CSRF (CWE-352) | Los formularios no demostraban origen legítimo | POST sin token → 403 | Token por sesión + =SameSite=Lax= + =compare_digest= | Un sitio de terceros no puede leer el token de la sesión ajena |
 
 * 6. Preguntas que suelen preguntar
@@ -175,7 +188,7 @@ quedarse aislado."
 - *¿Qué marcos normativos se tocan?* LFPDPPP y GDPR por los datos personales de clientes;
   NIST/ISO 27001 se pueden mencionar como referencia para registro, control de acceso y
   respuesta, pero el informe no alega certificación.
-- *¿El PDF está actualizado?* Sí: =INFORME.pdf= tiene 16 páginas y ya incluye el
+- *¿El PDF está actualizado?* Sí: =INFORME.pdf= tiene 19 páginas y ya incluye el
   cierre de brechas. La fuente de verdad es =INFORME.org=; reexpórtalo con
   =scripts/exportar.sh= si está disponible Emacs/Org + LaTeX + la plantilla local.
 

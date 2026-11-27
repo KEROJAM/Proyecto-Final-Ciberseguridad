@@ -88,4 +88,13 @@ body.tema-ejecutivo .badge { background: var(--accent-soft); color: var(--accent
 body.tema-ejecutivo .badge.alto,
 body.tema-ejecutivo .badge.critico { background: #fdecec; color: var(--crit); }
 body.tema-ejecutivo .badge.medio { background: var(--warn-bg); color: var(--warn); }
-body.tema-ejecutivo .user { color: #c4d6eb; }
+body.tema-ejecutivo .user-chip {
+  background: #ffffff; color: var(--accent); border-color: var(--line);
+  padding: 10px 20px; gap: 14px;
+}
+body.tema-ejecutivo .user-avatar {
+  width: 46px; height: 46px; background: var(--accent); color: #ffffff;
+  font-size: 1.05rem;
+}
+body.tema-ejecutivo .user-datos strong { font-size: 1.05rem; }
+body.tema-ejecutivo .user-datos small { color: var(--muted); opacity: 1; font-size: .8rem; }

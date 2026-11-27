@@ -22,13 +22,18 @@ uno deliberadamente vulnerable y otro corregido. Se reprodujeron y mitigaron
 inyección SQL, XSS y control de acceso roto (IDOR/BOLA), y se implementó un mecanismo
 de monitoreo y detección como mejora específica (Opción B). En una revisión posterior se
 cerraron las brechas que ZAP dejó como riesgo medio: token anti-CSRF por sesión y
-cabeceras adicionales de caché y navegador.
+cabeceras adicionales de caché y navegador. El portal se presenta como una herramienta
+de gestión de asuntos para un despacho jurídico: acceso obligatorio para todo el
+personal, fichas de expediente con abogado responsable y notas de trabajo adjuntas a
+cada asunto en lugar de un buzón de comentarios genérico.
 
-Las pruebas muestran que el payload ~Delta' OR '1'='1' --~ pasó de devolver 5
-expedientes a 0; el script =<script>alert('XSS-PROYECTO-FINAL')</script>= pasó de
-ejecutarse a mostrarse escapado con CSP; y el usuario =a_auxiliar= pasó de leer el
-expediente de =s_tio= (200) a recibir 403. El registro de eventos correlacionó fallos
-de login, patrones de ataque y accesos denegados en alertas verificables. Se cierra
+Las pruebas muestran que el payload ~Delta' OR '1'='1' --~ pasó de devolver 6
+expedientes a 0; ~s_tio' -- ~ permitió entrar sin contraseña en el modo vulnerable
+y fue rechazado en el corregido; el script =<script>alert('XSS-PROYECTO-FINAL')</script>=
+pasó de ejecutarse a mostrarse escapado con CSP; y el usuario =a_auxiliar= pasó de
+leer el asunto reservado del socio (200) a recibir 403. El registro de eventos
+correlacionó fallos de login, patrones de ataque y accesos denegados en alertas
+verificables. Se cierra
 con un procedimiento de respuesta a incidentes alineado con el escenario de
 ransomware y con la distinción entre acciones probadas y recomendaciones.
 #+END_abstract
@@ -46,8 +51,8 @@ organización seleccionada en el avance.
 #+ATTR_LATEX: :environment tabularx :width \textwidth :align X|X|X|X
 | Área                         | Resultado antes              | Resultado después                          | Evidencia                                                    |
 |------------------------------+------------------------------+--------------------------------------------+--------------------------------------------------------------|
-| Preparación del entorno      | Aplicación y endpoints en 127.0.0.1 | 5 rutas verificadas en cada modo     | [[file:evidencias/texto/01_entorno_endpoints.txt][01_entorno_endpoints.txt]] |
-| SQL Injection                | 5 filas con payload          | 0 filas; consulta parametrizada            | [[file:evidencias/texto/02_sqli_validacion.txt][02_sqli_validacion.txt]]   |
+| Preparación del entorno      | Aplicación y endpoints en 127.0.0.1 | Rutas verificadas en ambos modos y login global | [[file:evidencias/texto/01_entorno_endpoints.txt][01_entorno_endpoints.txt]] |
+| SQL Injection                | 6 filas y login sin contraseña | 0 filas; login rechazado; consultas parametrizadas | [[file:evidencias/texto/02_sqli_validacion.txt][02_sqli_validacion.txt]] |
 | XSS                          | Script sin escapar en HTML   | =<script>= escapado + CSP                  | [[file:evidencias/texto/03_xss_validacion.txt][03_xss_validacion.txt]]     |
 | IDOR/BOLA                    | Expediente ajeno 200         | 403 para =a_auxiliar=; 200 para propietario| [[file:evidencias/texto/04_idor_validacion.txt][04_idor_validacion.txt]]   |
 | Registros y detección        | Sin correlación              | 4 alertas de reglas + panel               | [[file:evidencias/texto/05_registros_monitoreo.txt][05_registros_monitoreo.txt]] |
@@ -71,7 +76,7 @@ organización seleccionada en el avance.
 | Campo                  | Valor                                                             |
 |------------------------+-------------------------------------------------------------------|
 | Organización           | Ramírez & Asociados, S.C. (ficticia)                               |
-| Industria              | Contabilidad, nómina y asesoría legal para pyMEs                   |
+| Industria              | Despacho jurídico: asesoría fiscal, laboral y corporativa para pyMEs |
 | Tamaño                 | 28 empleados, 3 socios, alrededor de 180 clientes                 |
 | Ubicación              | Ciudad de México (LFPDPPP; GDPR para clientes internacionales)     |
 | Servicios críticos     | Declaraciones fiscales, nóminas, expedientes contables y legales   |
@@ -126,13 +131,28 @@ La evidencia de esta etapa previa se resume en
 
 Se creó una aplicación Flask única conmutada por la variable =LAB_MODE=:
 
-- =vulnerable= en =http://127.0.0.1:5000=: conserva las tres debilidades.
+- =vulnerable= en =http://127.0.0.1:5000=: conserva SQLi en búsqueda y en login,
+  XSS e IDOR/BOLA.
 - =secure= en =http://127.0.0.1:5001=: incluye las correcciones y el monitoreo.
 
 Cada modo usa su propia base SQLite y su directorio de registros, para que las
-pruebas "antes" y "después" no se contaminen mutuamente. Los endpoints verificados
-fueron =/=, =/health=, =/login=, =/buscar=, =/comentarios=, =/expediente/<id>=,
-=/api/expediente/<id>=, =/alertas= y =/api/alertas=.
+pruebas "antes" y "después" no se contaminen mutuamente. El portal exige sesión en
+*ambos modos*: una petición anónima a cualquier ruta de la aplicación devuelve *302*
+hacia =/login?next=<ruta>=. Quedan públicas únicamente =/login=, =/logout=, =/health=
+y los archivos estáticos. Tras autenticarse se conserva la ruta solicitada, sin
+permitir redirecciones a dominios externos. El acceso anónimo se registra como
+=ACCESO_NO_AUTENTICADO=.
+
+Los endpoints verificados fueron =/=, =/health=, =/login=, =/buscar=,
+=/comentarios?expediente_id=<id>=, =/expediente/<id>=, =/api/expediente/<id>=,
+=/alertas= y =/api/alertas=. El modo vulnerable mantiene sus debilidades una vez
+dentro: la autenticación decide quién entra, pero no corrige SQLi, XSS ni la
+autorización por objeto. La identidad activa se muestra en la esquina superior
+derecha de cada pantalla, de modo que las capturas dejan constancia del perfil
+que realiza la acción.
+
+#+CAPTION: Pantalla principal de acceso al portal de expedientes
+[[file:capturas/documento/00_login_principal.png]]
 
 #+CAPTION: Aplicación de laboratorio en modo vulnerable con el índice de endpoints
 [[file:capturas/documento/01_endpoints.png]]
@@ -180,14 +200,24 @@ filas = conn.execute(sql).fetchall()
 2. Enviar ~q=Delta' OR '1'='1' --~; el ~--~ comenta el cierre de comilla añadido
    por la aplicación.
 3. Repetir la misma URL en el modo corregido.
+4. Enviar ~s_tio' -- ~ como usuario en =/login=, con cualquier contraseña: la
+   concatenación comenta la comparación de la contraseña y abre una sesión de socio.
 
 *** Resultado observado
 
 En el modo vulnerable la respuesta pasó de 1 expediente ("Constructora Delta") a
-*5 expedientes*, incluidos los propiedad de otros perfiles. En el modo corregido la
-misma entrada devolvió *0 filas*: el payload se comparó como texto literal.
+*6 expedientes*, incluidos los propiedad de otros perfiles. En el modo corregido la
+misma entrada devolvió *0 filas*: el payload se comparó como texto literal. En el
+formulario de acceso, el usuario ~s_tio' -- ~ produjo *200* y una sesión de =s_tio=
+sin contraseña válida en el modo vulnerable; en el corregido devolvió *401*.
 
-#+CAPTION: SQLi exitosa en la versión vulnerable: se listan los cinco expedientes
+#+CAPTION: Payload de inyección SQL precargado en el formulario de acceso
+[[file:capturas/documento/00_sqli_login.png]]
+
+#+CAPTION: Acceso como socio sin contraseña válida tras la inyección en /login
+[[file:capturas/documento/00_sqli_login_ok.png]]
+
+#+CAPTION: SQLi exitosa en la versión vulnerable: se listan los seis expedientes
 [[file:capturas/documento/02_sqli_vulnerable.png]]
 
 #+CAPTION: Misma payload en la versión corregida: sin resultados inesperados
@@ -203,6 +233,12 @@ filas = conn.execute(
     "SELECT id, cliente, descripcion, importe FROM expedientes "
     "WHERE cliente LIKE ?", (f"%{q}%",)
 ).fetchall()
+
+# DESPUÉS (modo seguro): login parametrizado + hash de la contraseña
+fila = conn.execute(
+    "SELECT * FROM usuarios WHERE username = ?", (username,)
+).fetchone()
+valido = bool(fila and check_password_hash(fila["password_hash"], password))
 #+end_src
 
 Además se registra =SQLI_DETECTADO= cuando la entrada coincide con un patrón de
@@ -211,15 +247,20 @@ inyección, aunque la consulta parametrizada ya neutralice el efecto.
 *** Riesgo e impacto y por qué el control reduce el riesgo
 
 Lectura no autorizada de expedientes, posible modificación si el usuario de base de
-datos tuviera permisos de escritura y exposición de RFC o montos. La parametrización
-separa código de datos: el motor SQLite compila la consulta antes de enlazar el valor,
-por lo que las comillas del atacante no pueden alterar la gramática SQL.
+datos tuviera permisos de escritura, exposición de RFC o montos y, en el login,
+omisión completa de la autenticación. La parametrización separa código de datos:
+el motor SQLite compila la consulta antes de enlazar el valor, por lo que las
+comillas del atacante no pueden alterar la gramática SQL; la contraseña se
+comprueba siempre contra el hash almacenado.
 
 ** Actividad 2 y 4. Cross-Site Scripting (CWE-79)
 
 *** Componente y problema
 
-=/comentarios= almacenaba texto del usuario y la plantilla lo insertaba con =|safe=:
+Las notas de trabajo se guardan ahora asociadas a un expediente
+(=comentarios.expediente_id=) y se consultan en =/comentarios?expediente_id=<id>=,
+con un enlace desde la ficha del asunto. En la versión vulnerable la plantilla
+insertaba el texto de la nota con =|safe=:
 
 #+begin_src html
 <!-- ANTES: Jinja recibe la orden de no escapar -->
@@ -228,9 +269,9 @@ por lo que las comillas del atacante no pueden alterar la gramática SQL.
 
 *** Procedimiento
 
-1. Iniciar sesión como =s_tio= y publicar
+1. Iniciar sesión como =s_tio= y publicar en el expediente 1
    =<script>alert('XSS-PROYECTO-FINAL')</script>=.
-2. Recargar =/comentarios= y buscar la etiqueta sin escapar en el HTML.
+2. Recargar =/comentarios?expediente_id=1= y buscar la etiqueta sin escapar en el HTML.
 3. Repetir en el modo corregido y revisar la cabecera =Content-Security-Policy=.
 
 *** Resultado observado
@@ -270,20 +311,21 @@ entregaban sin comparar =owner_id= con el usuario de la sesión.
 *** Procedimiento
 
 1. Iniciar sesión como =a_auxiliar=.
-2. Solicitar =/expediente/1=, propiedad de =s_tio=.
-3. Repetir en el modo corregido; verificar además el expediente propio (id 5) y el
-   acceso de =s_tio= al id 1.
+2. Solicitar =/expediente/6=, asunto reservado al socio =s_tio= ("Inversiones Ébano").
+3. Repetir en =/api/expediente/6= para observar el BOLA sobre el mismo objeto.
+4. Repetir en el modo corregido; verificar además el expediente propio (id 5) y el
+   acceso de =s_tio= al id 6.
 
 *** Resultado observado
 
 | Petición                                   | Vulnerable | Corregido |
 |--------------------------------------------+------------+-----------|
-| =a_auxiliar= → =/expediente/1=               | 200, datos ajenos | 403 |
-| =a_auxiliar= → =/api/expediente/1=           | 200, JSON ajeno   | 403 |
+| =a_auxiliar= → =/expediente/6=               | 200, datos ajenos | 403 |
+| =a_auxiliar= → =/api/expediente/6=           | 200, JSON ajeno   | 403 |
 | =a_auxiliar= → =/expediente/5= (propio)      | 200        | 200 |
-| =s_tio= → =/expediente/1= (socio)            | 200        | 200 |
+| =s_tio= → =/expediente/6= (socio)            | 200        | 200 |
 
-#+CAPTION: Acceso indebido a un expediente ajeno en la versión vulnerable
+#+CAPTION: IDOR sobre el asunto reservado en la versión vulnerable (usuario a_auxiliar arriba a la derecha)
 [[file:capturas/documento/04_idor_vulnerable.png]]
 
 #+CAPTION: Denegación 403 en la versión corregida
@@ -315,9 +357,9 @@ interfaz nunca es la única barrera.
 |----------------+-----------------+-------+---------+-----------|
 | SQLi | ~GET /buscar?q=...~ | 5 filas | 0 filas | Corregido |
 | XSS  | Payload XSS | Ejecutado | Escapado + CSP | Corregido |
-| IDOR | =a_auxiliar= lee expediente 1 | 200 | 403 | Corregido |
+| IDOR | =a_auxiliar= lee expediente 6 | 200 | 403 | Corregido |
 
-Payload XSS utilizado en la prueba (se publicó en =/comentarios=):
+Payload XSS utilizado en la prueba (se publicó como nota del expediente 1):
 
 #+begin_src html
 <script>alert('XSS-PROYECTO-FINAL')</script>
@@ -333,6 +375,11 @@ se validó manualmente. Los hallazgos se conservan en
 =evidencias/zap/zap_report.json= y el informe HTML en =evidencias/zap/zap_report.html=.
 Estos resultados se usaron como orientación para priorizar las pruebas manuales; la
 confirmación definitiva de cada vulnerabilidad proviene de las peticiones reproducidas.
+*Nota de alcance:* los informes ZAP incluidos se generaron antes de añadir la puerta de
+login global; el guion de escaneo no configura autenticación y, por tanto, un escaneo nuevo
+debería ejecutarse con una sesión/autenticación de formulario configurada para alcanzar
+las páginas internas. Las vulnerabilidades demostradas no dependen de esa puerta:
+=lab/pruebas/probar.py= las reproduce con sesión iniciada.
 
 El mismo escaneo se repitió contra el modo corregido. El resultado fue *0 alertas altas,
 3 medias, 18 bajas y 111 informativas*: desaparecieron SQLi, XSS persistente/reflejado,
@@ -351,15 +398,15 @@ control se validó únicamente con las pruebas manuales autenticadas.
 
 ** Actividad 5. Análisis de registros
 
-Se generaron eventos controlados: tres inicios de sesión fallidos, una petición con
-patrón SQLi, un comentario con patrón XSS y dos accesos denegados. La aplicación
+Se generaron eventos controlados: accesos sin sesión, tres inicios de sesión fallidos,
+patrones SQLi en búsqueda y login, una nota con patrón XSS y dos accesos denegados. La aplicación
 escribe cada evento en =logs/security.jsonl= con timestamp UTC, IP, método, ruta,
 usuario, resultado y severidad. Las reglas de
 [[file:lab/monitoreo/reglas.json][reglas.json]] correlacionan esos eventos y escriben
 alertas en =logs/alertas.jsonl=.
 
 La ejecución produjo alertas para los cuatro tipos esperados: fallos de autenticación,
-accesos no autorizados, patrón XSS y patrón SQLi. El detalle está en
+accesos no autorizados, patrón XSS y patrones SQLi en búsqueda y login. El detalle está en
 [[file:evidencias/texto/05_registros_monitoreo.txt][05_registros_monitoreo.txt]].
 
 Estos registros apoyan la detección porque permiten:
@@ -398,7 +445,8 @@ señal para el despacho.
 | Reglas de correlación | [[file:lab/monitoreo/reglas.json][reglas.json]] | Umbrales por tipo de evento y ventana de 60 s |
 | Alertas | =logs/alertas.jsonl= | Alertas con id, regla, severidad, cantidad y eventos asociados |
 | Panel | =/alertas= y =/api/alertas= | Consulta restringida al rol socio en el modo seguro |
-| Límite de intentos | =before_request= en =/login= | 10 intentos por IP y minuto; evento =RATE_LIMIT= |
+| Puerta de acceso | =exigir_login= (=before_request=) | Sesión obligatoria en ambos modos; =ACCESO_NO_AUTENTICADO= |
+| Límite de intentos | =limitar_login= (=before_request=) | 10 intentos por IP y minuto (configurable con =LAB_LOGIN_LIMIT= para capturas); evento =RATE_LIMIT= |
 
 #+CAPTION: Panel de monitoreo y detección con alertas correlacionadas
 [[file:capturas/documento/09_alertas_monitoreo.png]]
@@ -447,6 +495,9 @@ vulnerable que sirve de referencia para las pruebas «antes».
 | Formularios sin token anti-CSRF | Token aleatorio por sesión en =/login= y =/comentarios=, comparado con =hmac.compare_digest= | =app/app.py=, =login.html=, =comentarios.html= | [[file:evidencias/texto/08_controles_adicionales.txt][08_controles_adicionales.txt]] |
 | Intento sin token no generaba señal | Evento =CSRF_RECHAZADO= y regla =CSRF-001= (severidad alta) | =lab/monitoreo/reglas.json= | Ídem, sección 6 |
 | Respuestas almacenables en caché | =Cache-Control: no-store=, =Permissions-Policy= y =Cross-Origin-Resource-Policy= | =app/app.py= (=after_request=) | Ídem, sección 4 |
+| Vistas sin puerta de acceso | =exigir_login= redirige a =/login?next=...= y valida el destino | =app/app.py=, =login.html= | [[file:evidencias/texto/01_entorno_endpoints.txt][01_entorno_endpoints.txt]] |
+| Notas sin contexto | =comentarios.expediente_id=, selector de asunto y autorización por expediente | =app/app.py=, =comentarios.html= | [[file:evidencias/texto/03_xss_validacion.txt][03_xss_validacion.txt]] |
+| SQLi en el formulario de acceso | Consulta parametrizada por =username= y =check_password_hash= (el modo vulnerable conserva la concatenación) | =app/app.py= (=login=) | [[file:evidencias/texto/02_sqli_validacion.txt][02_sqli_validacion.txt]] |
 
 #+begin_src python
 recibido = request.form.get(
@@ -461,12 +512,14 @@ return jsonify(error="Token CSRF inválido o ausente"), 403
 
 Resultados repetibles con =lab/pruebas/verificar_controles.py=:
 
+- =GET /= sin sesión → *302* a =/login?next=/=; con sesión → *200*.
 - =POST /login= sin token → *403*; con token → *200* con sesión iniciada.
-- =POST /comentarios= sin token → *403*; con token → *200* y comentario visible.
+- =POST /comentarios= (nota del expediente 1) sin token → *403*; con token → *200* y nota visible.
 - Cabeceras presentes: CSP, =X-Frame-Options: DENY=, =X-Content-Type-Options=,
   =Referrer-Policy=, =Cache-Control: no-store=, =Permissions-Policy= y
   =Cross-Origin-Resource-Policy=.
-- Regresión: =a_auxiliar= sigue recibiendo *403* en =/expediente/1= y en la API.
+- Regresión: =a_auxiliar= sigue recibiendo *403* en =/expediente/6= y en la API; el
+  payload de SQLi en =/login= devuelve *401* con token CSRF válido.
 - El registro correlacionó dos eventos =CSRF_RECHAZADO= en una alerta =CSRF-001=.
 
 Por qué reduce el riesgo: un sitio malicioso no puede leer el token de la sesión de la
@@ -546,7 +599,7 @@ lab/zap/scan.sh http://127.0.0.1:5001 evidencias/zap/secure
 scripts/exportar.sh   # requiere Emacs/Org, LaTeX y ~/Documents/Clases/sample.tex
 #+end_src
 
-=INFORME.pdf= es la exportación actualizada de =INFORME.org= (16 páginas) e incluye
+=INFORME.pdf= es la exportación actualizada de =INFORME.org= (19 páginas) e incluye
 el cierre de brechas descrito en este apartado. La fuente de verdad sigue siendo
 =INFORME.org=; vuelva a exportar con el comando anterior cuando el entorno LaTeX esté
 disponible y el documento cambie.
@@ -561,7 +614,7 @@ disponible y el documento cambie.
 | [[file:evidencias/texto/04_idor_validacion.txt][04_idor_validacion.txt]] | Matriz de accesos por usuario y modo |
 | [[file:evidencias/texto/05_registros_monitoreo.txt][05_registros_monitoreo.txt]] | Eventos controlados y alertas correlacionadas |
 | [[file:evidencias/texto/06_zap_antes_despues.txt][06_zap_antes_despues.txt]] | Comparación de hallazgos ZAP antes/después |
-| [[file:evidencias/texto/07_capturas.txt][07_capturas.txt]] | Geometría y URLs de las 14 capturas |
+| [[file:evidencias/texto/07_capturas.txt][07_capturas.txt]] | Geometría y URLs de las 19 capturas |
 | [[file:evidencias/texto/08_controles_adicionales.txt][08_controles_adicionales.txt]] | CSRF, cabeceras y regresión de IDOR |
 | [[file:evidencias/zap/zap_resumen.txt][zap_resumen.txt]] | Resumen de hallazgos de OWASP ZAP (vulnerable) |
 | [[file:evidencias/zap/secure/zap_resumen.txt][zap_resumen.txt (secure)]] | Resumen de hallazgos de OWASP ZAP (corregido) |

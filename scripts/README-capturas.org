@@ -58,6 +58,9 @@ Para regenerar las 14 imágenes del informe y de la presentación sin escritorio
 de fondo se usa:
 
 #+begin_src sh
+# Los servidores deben arrancar con un límite de login alto: cada captura inicia sesión.
+LAB_LOGIN_LIMIT=100 lab/run.sh vulnerable 5000
+LAB_LOGIN_LIMIT=100 lab/run.sh secure 5001
 LAB_PASSWORD='...' scripts/capturar_figuras.sh
 #+end_src
 
