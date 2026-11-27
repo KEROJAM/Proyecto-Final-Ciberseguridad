@@ -1,0 +1,309 @@
+#+TITLE: Guion y orden de implementación · Presentación ejecutiva
+#+LANGUAGE: es
+
+Este documento convierte el proyecto ya terminado en una exposición de *17
+diapositivas* siguiendo la rúbrica entregada. Incluye: (1) el orden en que deben
+prepararse las diapositivas, (2) el guion literal y el hablante de cada una, (3) la
+secuencia exacta de demostración y (4) el mapa de evidencias que las respalda.
+
+*Regla de oro:* en cada diapositiva se explica primero el *problema y su impacto* y
+después la *solución técnica*. Toda afirmación se etiqueta mentalmente como
+=PROBADO= (evidencia en el repositorio), =LAB= (demostración aislada) o
+=PROPUESTA= (recomendación futura). No se presentan beneficios cuantitativos que no
+estén medidos.
+
+Equipo consultor: *Jahil Majorek Casas Sánchez* (AL07083340) y *Hugo David Ruiz
+Moreno* (AL03001445). Duración objetivo: *13 minutos* (11:30 si se recortan los
+detalles de las diapositivas 5, 13 y 16).
+
+* 1. Orden de implementación (antes del día de la exposición)
+
+| Paso | Qué hacer | Salida concreta | Comprobación |
+|------+-----------+-----------------+--------------|
+| 1 | Fijar la fuente de verdad: leer =INFORME.pdf= (19 páginas) y =evidencias/texto/0[1-8]=. No inventar cifras nuevas. | Una hoja con los 6 números clave: 28 empleados, ~180 clientes, 6→0 filas, 200→403, 3→0 altas en ZAP, 4 reglas de alerta. =pdfinfo INFORME.pdf= → 19 páginas. | =pdfinfo INFORME.pdf= y =ls evidencias/texto= |
+| 2 | Definir el formato: 16:9, 1920×1080, tema blanco/azul oscuro, máximo 25-30 palabras por diapositiva y máximo 3 líneas de código. | Plantilla corporativa con logo textual «Ramírez & Asociados, S.C.», pie con nombre del proyecto y numeración. | Montar las diapositivas 1 y 11 primero: son las que más texto tienen. |
+| 3 | Preparar el entorno de demostración con contraseña temporal de la sesión; nunca escribirla en las diapositivas ni en el repo. | Dos servicios: :5000 vulnerable y :5001 corregido. =curl :5000/health= y =:5001/health= → 200. | Ver §3 de este documento. |
+| 4 | Copiar/insertar las capturas de =capturas/presentacion/= en las diapositivas que corresponden (§5). Todas son 1920×1080 según =evidencias/texto/07_capturas.txt=. | Capturas 00_login_principal, 00_sqli_login, 01_contexto, 02_vulnerabilidades, 03_correciones, 04_monitoreo y 05_hallazgos_zap. | =identify -format '%wx%h' capturas/presentacion/*.png= |
+| 5 | Construir el bloque ejecutivo (diapositivas 1-6): organización, riesgos del avance y objetivos. Aquí se gana la rúbrica de «enfoque empresarial». | 6 diapositivas con una tabla corta cada una; sin comandos todavía. | Un consultor externo entiende el negocio en 3 minutos. |
+| 6 | Dibujar el diagrama de la diapositiva 7 con el bloque de texto de este documento (§2, diapositiva 7). Distinguir claramente laboratorio vs. infraestructura real. | Un esquema con dos servidores locales, dos SQLite y dos directorios de logs. | Se puede explicar señalando, sin leerlo. |
+| 7 | Ensayar las tres demostraciones obligatorias (diapositivas 8-10) en el orden SQLi → XSS → IDOR/BOLA, con la misma petición en :5000 y :5001. | 3 pantallas «antes» y 3 «después» identificadas por el usuario en la esquina superior derecha. | Repetir cada demo dos veces seguidas sin fallar. |
+| 8 | Armar la tabla comparativa (diapositiva 11) y las diapositivas de mejora (12-13) usando =/alertas= y =evidencias/texto/05_registros_monitoreo.txt=. | Tabla de 3 filas + 4 nombres de alerta =LOGIN-001=, =ACCESO-001=, =SQLI-001=, =XSS-001=. | Cada celda tiene un archivo de evidencia detrás. |
+| 9 | Redactar respuesta a incidentes (14), beneficios (15), riesgos (16) y cierre (17) con las etiquetas =PROBADO= / =RECOMENDACIÓN=. | Tabla de 5 fases y lista de 4 recomendaciones priorizadas. | Ninguna frase diga «implementamos» algo marcado como propuesta. |
+| 10 | Ensayo general cronometrado con cambio de hablante y plan de contingencia (capturas si falla el vivo). | 13:00 ± 30 s; ambos integrantes hablan ~6 min. | Repasar la checklist de la §7. |
+
+* 2. Guion diapositiva por diapositiva
+
+** Diapositiva 1 · Portada corporativa (0:25) · Habla: Jahil
+
+- *En pantalla:* «Ramírez & Asociados, S.C. | Evaluación y fortalecimiento de la seguridad de aplicaciones web | Informe ejecutivo de consultoría | Jahil Majorek Casas Sánchez (AL07083340) · Hugo David Ruiz Moreno (AL03001445) | 26 de noviembre de 2026». Fondo blanco, franja azul oscuro; sin capturas.
+- *Guion:* «Buenos días. Presentamos la segunda etapa del proyecto de seguridad para el despacho Ramírez & Asociados. Nuestro trabajo partió de un incidente de ransomware del avance y terminó en una aplicación de laboratorio donde pudimos demostrar, corregir y volver a probar tres vulnerabilidades web. Jahil cubrirá el contexto, la arquitectura, SQLi y la mejora; Hugo cubrirá el perfil, XSS, el control de acceso y la respuesta a incidentes.»
+- *Transición:* «Empecemos por por qué este sector nos importa.»
+
+** Diapositiva 2 · Contexto de la industria (0:35) · Habla: Hugo
+
+- *En pantalla:* Servicios jurídicos y fiscales para pyMEs · 28 empleados, 3 socios, ~180 clientes · LFPDPPP y GDPR · 4 riesgos: phishing/ransomware, abuso de credenciales, exposición de expedientes, falta de visibilidad web.
+- *Guion:* «Es un despacho jurídico que presta asesoría fiscal, laboral y corporativa. Maneja información que identifica a personas y revela su situación económica: RFC, CURP, ingresos, cuentas y casos legales. Eso explica el impacto: un cifrado de archivos no solo detiene la facturación, también genera riesgo de incumplimiento. Los riesgos más relevantes son el phishing que ya vivimos, el abuso de credenciales, el acceso indebido a expedientes y —la brecha que motivó esta etapa— la ausencia de visibilidad sobre lo que ocurre en la aplicación web.»
+- *Rigor:* Los datos son ficticios y están en =INFORME.org=, «Contexto de la organización».
+- *Transición:* «Así se traduce en operación diaria.»
+
+** Diapositiva 3 · Perfil de la organización (0:35) · Habla: Jahil
+
+- *En pantalla:* tabla de 5 filas: actividad principal; productos/servicios; usuarios/clientes; sistemas críticos; información sensible.
+  | Actividad | Asesoría fiscal, laboral y corporativa |
+  | Servicios | Declaraciones, nóminas, expedientes contables y legales |
+  | Usuarios | 3 socios, 25 colaboradores, ~180 clientes pyME |
+  | Sistemas críticos | Servidor de archivos, NAS de respaldo, SSH y portal de expedientes |
+  | Información sensible | RFC/CURP, ingresos, datos bancarios, nóminas, casos |
+- *Guion:* «El portal de expedientes es el sistema que evaluamos: ahí se concentran las fichas de clientes, notas de trabajo y montos de honorarios. En la app de laboratorio cada expediente tiene un abogado responsable y las notas están adjuntas al asunto, no en un buzón genérico. Por eso un fallo de autorización no es un detalle técnico: permite leer el asunto de otro cliente.»
+- *Evidencia:* =capturas/presentacion/01_contexto.png= (si se quiere mostrar la interfaz real del portal).
+- *Transición:* «Ese mismo portal ya había fallado antes de este proyecto.»
+
+** Diapositiva 4 · Situación inicial y riesgos (0:45) · Habla: Hugo
+
+- *En pantalla:* «Viernes 17:40 · “Factura pendiente de pago.zip” → cifrado del servidor y del NAS montado con las mismas credenciales → 3 días de paro · nota de rescate por 2 BTC · riesgo de multa fiscal». Debajo, solo 3 riesgos prioritarios: permisos amplios (20), NAS sin aislamiento (15), SSH sin MFA (16).
+- *Guion:* «El escenario del avance es conocido: un auxiliar abrió un adjunto, el cifrado alcanzó el NAS porque estaba montado con las mismas credenciales y el despacho quedó sin expedientes durante tres días. Los riesgos críticos eran permisos amplios en archivos compartidos, respaldos sin aislamiento y accesos remotos sin MFA. El aprendizaje fue que existían controles, pero no visibilidad central ni evaluación de la aplicación: podían ocurrir cosas en la web sin que nadie lo notara.»
+- *Rigor:* *LAB*: escenario ficticio; *PROBADO en el avance*: consecuencias y matriz de riesgos documentadas.
+- *Transición:* «Veamos qué quedó implementado de aquella primera etapa.»
+
+** Diapositiva 5 · Primera etapa: controles implementados (0:45) · Habla: Jahil
+
+- *En pantalla:* dos columnas.
+  | *Comprobados* | *Propuestos / pendientes* |
+  | MFA TOTP en SSH para =s_tio= | HTTPS en la web |
+  | Grupos socio/contador/auxiliar + ACL y SETGID | Filtrado de correo |
+  | =nftables=: política drop, 3 intentos/min en SSH | MFA también en aplicaciones web |
+  | LUKS1/LUKS2 y =rsync= diario con =sha256sum= | NAS aislado y diagrama de 3 segmentos |
+  | Simulacro GoPhish: 5 correos, 5 clics, 3 formularios | Rotación de 90 días (configurada, no esperada en el laboratorio) |
+- *Guion:* «La primera etapa sí dejó controles verificables: MFA en SSH, perfiles funcionales con ACL, firewall, cifrado y una restauración comprobada por hash. La simulación de phishing mostró que el factor humano seguía siendo débil. En cambio, HTTPS, el filtrado de correo y llevar MFA a la web quedaron como propuestas; esa última limitación es la que retomamos ahora.»
+- *Rigor:* separar tajantemente las dos columnas; no decir «implementamos HTTPS».
+- *Transición:* «Por eso la segunda etapa miró hacia la aplicación.»
+
+** Diapositiva 6 · Objetivos de la segunda etapa (0:30) · Habla: Hugo
+
+- *En pantalla:* 3 objetivos + 1 mejora: reproducir y corregir SQLi, XSS e IDOR/BOLA; repetir las mismas pruebas; dejar evidencia verificable; añadir monitoreo y detección (Opción B).
+- *Guion:* «Decidimos ampliar el análisis a la seguridad de aplicaciones porque el ransomware demostró que el riesgo ya no estaba solo en el sistema operativo. La consigna tenía una práctica común con tres vulnerabilidades obligatorias y una mejora libre para la organización. Elegimos monitoreo y detección: era la limitación explícita del avance y encajaba con el ransomware, donde nadie vio señales hasta que fue demasiado tarde. Nuestro criterio de éxito fue simple: la misma petición debía dar un resultado distinto antes y después.»
+- *Transición:* «El laboratorio se construyó para que esa comparación sea limpia.»
+
+** Diapositiva 7 · Arquitectura y entorno de evaluación (0:35) · Habla: Jahil
+
+- *En pantalla:* diagrama sencillo (copiar este bloque a la diapositiva):
+
+  #+begin_example
+   Navegador / ZAP 2.17.0  (127.0.0.1, sin Internet)
+            |                         |
+            v                         v
+   +---------------------+   +---------------------+
+   | MODO VULNERABLE     |   | MODO CORREGIDO      |
+   | :5000  "antes"      |   | :5001  "después"    |
+   | lab_5000.sqlite3    |   | lab_5001.sqlite3    |
+   | logs/ (vulnerable)  |   | logs/ + /alertas    |
+   +---------------------+   +---------------------+
+            \                         /
+             \_______________________/
+              misma app, distinto LAB_MODE
+   --------------------------------------------------
+   Infraestructura real del despacho (no se tocó):
+   servidor de archivos · NAS aislado propuesto · SSH con MFA
+  #+end_example
+
+- *Guion:* «Usamos una sola aplicación Flask con dos modos: el vulnerable en el puerto 5000 y el corregido en el 5001. Cada uno tiene su propia base SQLite y su propio directorio de registros para que el “antes” no contamine el “después”. OWASP ZAP se ejecutó contra ambos. Esto es únicamente un laboratorio local con datos ficticios; la infraestructura real del despacho —archivos, NAS y SSH— no se modificó en esta etapa.»
+- *Evidencia:* =evidencias/texto/01_entorno_endpoints.txt= y =evidencias/texto/06_zap_antes_despues.txt=.
+- *Transición:* «Primera vulnerabilidad: inyección SQL.»
+
+** Diapositiva 8 · Vulnerabilidad 1: SQL Injection (1:30) · Habla: Jahil (demo en vivo)
+
+- *En pantalla:* una línea de código por lado y el resultado; usuario =s_tio= visible arriba a la derecha.
+  | Antes | ~f"WHERE cliente LIKE '%{q}%'"~ · búsqueda: *6 filas* · login ~s_tio' -- ~ → *200* sin contraseña válida |
+  | Después | =LIKE ?= con parámetro · búsqueda: *0 filas* · =/login= parametrizado + =check_password_hash= → *401* |
+- *Guion:* «El problema era que la entrada del usuario se concatenaba directamente en la consulta SQL. En la búsqueda, el payload ~Delta' OR '1'='1' --~ cerró la comilla y listó los seis expedientes del laboratorio, incluidos asuntos ajenos. Más grave aún: el formulario de acceso tenía la misma falla. Con el usuario ~s_tio' -- ~ y cualquier contraseña, el ~--~ comentaba la comparación y la app iniciaba sesión como socio. El impacto es una omisión total de autenticación. La corrección separa código de dato: consultas parametrizadas, límite de longitud y verificación de la contraseña contra su hash. Repetimos exactamente las dos peticiones: 6→0 filas y bypass→401.»
+- *Demo (§3):* abrir la búsqueda vulnerable y la corregida; luego el login con el payload.
+- *Evidencia:* =capturas/presentacion/00_sqli_login.png=, =00_sqli_login.png= del documento, =02_vulnerabilidades.png=, =03_correciones.png= y =evidencias/texto/02_sqli_validacion.txt=.
+- *Transición:* «La segunda falla no robaba datos directamente, pero podía ejecutar código en el navegador.»
+
+** Diapositiva 9 · Vulnerabilidad 2: Cross-Site Scripting (1:00) · Habla: Hugo (demo en vivo)
+
+- *En pantalla:* payload =<script>alert('XSS-PROYECTO-FINAL')</script>= publicado como nota del expediente 1; antes: *se ejecuta*; después: *=&lt;script&gt;= escapado + CSP*.
+- *Guion:* «Las notas de trabajo se guardaban y volvían a pintar con el filtro =safe=, que le decía a Jinja que no escapara el HTML. Publicamos una etiqueta =script= como nota controlada en el expediente 1: en el modo vulnerable el navegador la ejecutó. En el corregido, el autoescape convierte los caracteres en entidades y la cabecera =Content-Security-Policy= es una segunda capa que bloquearía scripts inline aunque escapara algo por otra vía. Impacto potencial: robo de sesión o suplantación dentro del portal. La comprobación fue la misma nota en ambos modos.»
+- *Demo (§3):* publicar la nota en :5000 y observar el texto en :5001.
+- *Evidencia:* =capturas/documento/03_xss_vulnerable.png= y =07_xss_corregido.png=, =evidencias/texto/03_xss_validacion.txt=.
+- *Transición:* «La tercera no necesita inyectar código: solo cambiar un número en la URL.»
+
+** Diapositiva 10 · Vulnerabilidad 3: IDOR/BOLA (1:00) · Habla: Hugo (demo en vivo)
+
+- *En pantalla:* =a_auxiliar= → expediente 6 «Inversiones Ébano» (reservado al socio =s_tio=).
+  | Endpoint | Vulnerable | Corregido |
+  | =/expediente/6= (IDOR, HTML) | 200, datos ajenos | 403 |
+  | =/api/expediente/6= (BOLA, JSON) | 200, JSON ajeno | 403 |
+- *Guion:* «La ficha y la API buscaban el expediente por identificador sin comparar quién lo poseía. Iniciamos sesión como asistente y pedimos el expediente 6, un asunto confidencial del socio: en el vulnerable devolvió 200 con los datos, y la API devolvió el mismo objeto. Ojo con la distinción: IDOR es el acceso por URL en la interfaz; BOLA es el mismo fallo expuesto como API. La corrección compara =owner_id= con la sesión o el rol de socio y deniega por defecto; el propietario y el socio siguen con 200. ZAP no detectó este fallo porque necesita autenticarse y entender la propiedad, por eso la validación fue manual. En las capturas aparece =a_auxiliar= en la esquina superior derecha.»
+- *Demo (§3):* login como =a_auxiliar=, abrir HTML y API en :5000 y :5001.
+- *Evidencia:* =capturas/documento/04_idor_vulnerable.png= y =08_idor_corregido.png=, =evidencias/texto/04_idor_validacion.txt=.
+- *Transición:* «Resumamos antes de pasar a la mejora.»
+
+** Diapositiva 11 · Resumen de las correcciones (0:35) · Habla: Jahil
+
+- *En pantalla:* tabla de 4 columnas (no añadir más filas).
+
+  | Vulnerabilidad | Riesgo de negocio | Control implementado | Validación |
+  |----------------+-------------------+----------------------+------------|
+  | SQLi (CWE-89) | Lectura de expedientes y omisión de autenticación | Parámetros enlazados en =/buscar= y =/login=; =check_password_hash= | 6→0 filas; login bypass→401 |
+  | XSS (CWE-79) | Suplantación dentro del portal | Autoescape + CSP =default-src 'self'= | Script ejecutado→escapado |
+  | IDOR/BOLA (CWE-639) | Fuga de asunto reservado | Autorización por =owner_id=/rol en servidor | 200→403 en HTML y API |
+
+- *Guion:* «Las tres correcciones están en la misma base de código y se validaron con las mismas peticiones. Ninguna depende de ocultar botones en la interfaz: la decisión la toma el servidor. Después añadimos token anti-CSRF y cabeceras de caché; la evidencia 08 registró 403 sin token y 200 con token.»
+- *Rigor:* =PROBADO= en laboratorio; no decir que ZAP validó el IDOR.
+- *Transición:* «Ahora, la mejora diseñada específicamente para este despacho.»
+
+** Diapositiva 12 · Mejora específica de la organización (0:45) · Habla: Hugo
+
+- *En pantalla:* «Opción B · Monitoreo y detección | Motivo: sin visibilidad web (riesgo P×I=16, Alto) | Antes: respuestas 200/403 sin rastro correlacionable | Después: eventos → reglas → alertas → panel».
+- *Guion:* «Elegimos la Opción B porque el ransomware mostró que el despacho no tenía visibilidad central y el avance dejó claro que MFA cubría SSH pero no la web. El riesgo era el abuso de credenciales y la iteración sobre identificadores de expedientes: antes, esas acciones podían pasar desapercibidas aunque la respuesta HTTP fuera correcta. La mejora es verificable porque cada evento se escribe, se correlaciona por reglas y se consulta en un panel. Es una innovación modesta pero propia: no importamos un SIEM comercial, construimos la correlación mínima.»
+- *Transición:* «Veamos la implementación y lo que realmente cambió.»
+
+** Diapositiva 13 · Implementación y resultados de la mejora (0:60) · Habla: Jahil
+
+- *En pantalla:* 4 componentes y 4 alertas.
+  | Componente | Resultado |
+  | =registrar_evento= → =logs/security.jsonl= | Hora UTC, IP, usuario, ruta, severidad y estado |
+  | =lab/monitoreo/reglas.json= | Umbrales en ventana de 60 s |
+  | =logs/alertas.jsonl= | =LOGIN-001=, =ACCESO-001=, =SQLI-001=, =XSS-001= |
+  | =/alertas= y =/api/alertas= | 200 para =s_tio=; 403 para =a_auxiliar= |
+- *Guion:* «Los eventos controlados de las pruebas generaron las cuatro alertas esperadas: tres fallos de login, accesos denegados, patrones SQLi en búsqueda y login, y la nota con patrón XSS. El panel solo lo ve el rol socio, así que el propio mecanismo de defensa no abre una nueva puerta. Los contadores corresponden a una ejecución concreta de =probar.py=; al repetirla pueden subir, pero el veredicto de cada regla se mantiene.»
+- *Evidencia:* =capturas/presentacion/04_monitoreo.png=, =evidencias/texto/05_registros_monitoreo.txt=.
+- *Rigor:* =PROBADO= en laboratorio; =RECOMENDACIÓN= enviar a SIEM (aún no hecho).
+- *Transición:* «Detectar sirve si existe un procedimiento claro de respuesta.»
+
+** Diapositiva 14 · Respuesta a incidentes (0:55) · Habla: Hugo
+
+- *En pantalla:* tabla de 5 fases con estado visible.
+
+  | Fase | Acción clave | Estado |
+  |------+--------------+--------|
+  | Detección | Alertas =LOGIN_FALLIDO=, =SQLI_DETECTADO=, =ACCESO_DENEGADO=, =CSRF_RECHAZADO=; panel =/alertas= | *Probado* en laboratorio |
+  | Análisis | Correlacionar IP, usuario, ruta y timestamp | *Probado parcialmente* |
+  | Contención | Negar perfil, bloquear IP en firewall, desmontar NAS | *Recomendación* (nftables probado antes; bloqueo automático no implementado) |
+  | Recuperación | Restaurar con =sha256sum= y reconstruir la base | *Probado en el avance* para archivos |
+  | Verificación | Repetir las 3 pruebas y revisar sesiones | *Probado* para vulnerabilidades; sesiones es recomendación |
+
+- *Guion:* «Ante un pico de fallos de acceso, el procedimiento es aislar, conservar registros, identificar alcance con las alertas, restaurar desde el último respaldo íntegro y reintegrar solo después de verificar. He marcado en la tabla lo que probamos y lo que solo recomendamos. El bloqueo automático desde esta app no existe y no lo vamos a presentar como existente; las reglas de =nftables= y el desmontaje se probaron en la etapa anterior. Esa distinción es parte del rigor técnico.»
+- *Evidencia:* tabla de «Actividad 9» en =INFORME.org=, =INFORME.pdf= pág. correspondiente.
+- *Transición:* «¿Qué se lleva la dirección de esto?»
+
+** Diapositiva 15 · Resultados y beneficios empresariales (0:35) · Habla: Jahil
+
+- *En pantalla:* 5 beneficios cualitativos, sin porcentajes ni ahorros: reducción de riesgo; controles reforzados y verificados; protección de expedientes; capacidades de detección; mayor preparación de respuesta.
+- *Guion:* «Los beneficios que podemos afirmar son cualitativos porque no medimos ahorros ni tiempo de recuperación real: hay menos superficie explotable, los controles tienen evidencia repetible, la información sensible del despacho está mejor protegida en el laboratorio, existen señales de detección y el equipo tiene un procedimiento documentado. Eso es lo que respaldan los archivos del repositorio. Cualquier cifra económica quedaría fuera de lo medido.»
+- *Rigor:* =PROBADO= solo en laboratorio; no extrapolar a producción.
+- *Transición:* «Queda decir qué no está resuelto.»
+
+** Diapositiva 16 · Riesgos pendientes y recomendaciones (0:45) · Habla: Hugo
+
+- *En pantalla:* prioridades numeradas.
+  1. * Alta: HTTPS y MFA en la web; filtrado de correo (avance pendiente).
+  2. * Alta: enviar alertas a SIEM o correo y ajustar reglas para reducir falsos positivos.
+  3. * Media: ocultar la cabecera =Server= con reverse proxy; aislar el NAS y revisar la rotación de credenciales.
+  4. * Media: volver a pasar ZAP tras el último cambio y mantener el modo vulnerable aislado en =127.0.0.1=.
+- *Guion:* «Las limitaciones son reales: las ventanas de conteo viven en memoria, la IP viene de =request.remote_addr= y los patrones pueden dar falsos positivos. Por eso no activamos bloqueos automáticos. Priorizaríamos HTTPS y MFA web y el filtrado de correo; después la correlación centralizada; y finalmente endurecimiento del proxy y una nueva pasada de ZAP, porque los informes incluidos son anteriores al cierre de CSRF. El modo vulnerable debe quedarse apagado y aislado cuando no se demuestra.»
+- *Rigor:* =PROPUESTA=; =LAB= para el modo vulnerable.
+- *Transición:* «Cerramos con un mensaje para la dirección.»
+
+** Diapositiva 17 · Conclusiones ejecutivas (0:45) · Habla: Jahil
+
+- *En pantalla:* 3 líneas: «Logrado: tres vulnerabilidades reproducidas, corregidas y verificadas» · «Mitigado: omisión de autenticación, lectura de asuntos ajenos, ejecución de script y falta de señales» · «Siguiente paso: plan de 90 días».
+- *Guion:* «Se logró pasar de una aplicación vulnerable a un modo corregido con evidencia repetible: la búsqueda dejó de filtrar expedientes, el login rechaza el bypass, las notas se muestran escapadas y el asunto reservado devuelve 403. La mejora de monitoreo convirtió intentos silenciosos en alertas. Nuestra recomendación concreta a la dirección es aprobar un plan de 90 días que implemente HTTPS y MFA en la web, filtre el correo y centralice las alertas, con revisión trimestral de reglas y el laboratorio vulnerable estrictamente aislado. Quedamos a su disposición para preguntas.»
+- *Cierre:* «Gracias. ¿Preguntas?»
+- *Nota:* esta es la última diapositiva; dejarla en pantalla durante el turno de preguntas.
+
+* 3. Secuencia exacta de demostración en vivo (run-of-show)
+
+#+begin_src bash
+# Solo en la sesión de la presentación; NO pegar en diapositivas ni versionar.
+export LAB_PASSWORD="$(openssl rand -hex 12)"
+export LAB_USER_PASSWORD="$LAB_PASSWORD"
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r app/requirements.txt
+lab/run.sh vulnerable 5000 &
+lab/run.sh secure 5001 &
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:5000/health   # 200
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:5001/health   # 200
+#+end_src
+
+Pestañas recomendadas, en este orden (abrirlas antes de empezar):
+
+1. =http://127.0.0.1:5000/login= — acceso vulnerable; usuario =s_tio= con la contraseña temporal.
+2. =http://127.0.0.1:5001/login= — acceso corregido; mismas credenciales.
+3. =http://127.0.0.1:5000/expediente/6= y =/api/expediente/6= — abrir tras iniciar sesión como =a_auxiliar=.
+4. =http://127.0.0.1:5001/alertas= — panel con la sesión de =s_tio=.
+
+| Orden | Acción | Resultado que se comenta |
+|-------+--------+--------------------------|
+| 1 | En :5000, =/buscar?q=Delta%27%20OR%20%271%27%3D%271%27%20--= | 6 filas de expedientes |
+| 2 | En :5001, misma URL | 0 filas |
+| 3 | En :5000, =/login= con usuario =s_tio' -- = y contraseña arbitraria | Sesión de socio abierta sin contraseña válida; =s_tio= arriba a la derecha |
+| 4 | En :5001, =/login= con el mismo usuario (rellenar el token CSRF del formulario) | 401, no entra |
+| 5 | En :5000, nota =<script>alert('XSS-PROYECTO-FINAL')</script>= en =/comentarios?expediente_id=1= | Script ejecutado |
+| 6 | En :5001, misma nota en el mismo expediente | Texto escapado y CSP activa |
+| 7 | En :5000, login como =a_auxiliar= y abrir =/expediente/6= y =/api/expediente/6= | 200 con datos ajenos |
+| 8 | En :5001, mismas dos URLs con =a_auxiliar= | 403 en HTML y en JSON |
+| 9 | En :5001, =/alertas= con =s_tio= | Alertas =LOGIN-001=, =ACCESO-001=, =SQLI-001=, =XSS-001= |
+
+Atajo para el punto 7: =http://127.0.0.1:5000/login?next=/expediente/6=.
+
+*Plan de contingencia:* si falla el navegador o el servicio, se muestran las capturas
+de =capturas/presentacion/= y =capturas/documento/= en el orden 00 → 02 → 03 → 04 →
+09; el guion literal no cambia. La contraseña nunca se escribe en pantalla: las
+capturas ya muestran el usuario en la esquina superior derecha sin revelarla.
+
+* 4. Participación del equipo
+
+| Integrante | Diapositivas que presenta | Demostraciones | Materia que debe poder defender |
+|------------+---------------------------+----------------+---------------------------------|
+| Jahil Majorek Casas Sánchez | 1, 3, 5, 8, 11, 13, 15, 17 | SQLi (búsqueda y login) y panel de alertas | Arquitectura, consultas parametrizadas, hashes, correlación y cierre |
+| Hugo David Ruiz Moreno | 2, 4, 6, 7, 9, 10, 12, 14, 16 | XSS e IDOR/BOLA | Contexto de negocio, riesgos, autorización por objeto y respuesta a incidentes |
+
+Regla de ensayo: quien habla no toca el teclado; el otro prepara la siguiente URL.
+Así se evita leer la pantalla y se mantiene el ritmo.
+
+* 5. Mapa de evidencias por diapositiva
+
+| Diapositiva | Imagen / archivo | Evidencia de texto |
+|-------------+------------------+--------------------|
+| 3 | =capturas/presentacion/01_contexto.png= | =INFORME.org=, ficha institucional |
+| 5 | — | =INFORME_EVIDENCIAS.md= (avance) |
+| 7 | diagrama de este documento | =01_entorno_endpoints.txt=, =06_zap_antes_despues.txt= |
+| 8 | =00_login_principal.png=, =00_sqli_login.png=, =02_vulnerabilidades.png=, =03_correciones.png= | =02_sqli_validacion.txt= |
+| 9 | =03_xss_vulnerable.png=, =07_xss_corregido.png= | =03_xss_validacion.txt= |
+| 10 | =04_idor_vulnerable.png=, =08_idor_corregido.png= | =04_idor_validacion.txt= |
+| 11 | — | =08_controles_adicionales.txt= |
+| 13 | =04_monitoreo.png=, =09_alertas_monitoreo.png= | =05_registros_monitoreo.txt= |
+| 14 | — | =INFORME.org=, Actividad 9 |
+| 15-17 | =05_hallazgos_zap.png= si se necesita recordatorio visual | =INFORME.pdf= |
+
+Todas las imágenes de =capturas/presentacion/= son 1920×1080 y usan el tema
+ejecutivo blanco/azul oscuro; la geometría está registrada en
+=evidencias/texto/07_capturas.txt=.
+
+* 6. Frases cortas para preguntas previsibles
+
+- *¿Por qué dejar el modo vulnerable?* Es un laboratorio aislado que permite comparar
+  antes y después con la misma petición; no está expuesto a Internet.
+- *¿ZAP detectó el IDOR?* No; necesita sesión y comprobar propiedad del objeto. Se
+  validó manualmente con =a_auxiliar=.
+- *¿Por qué el ZAP guardado aún muestra 3 alertas medias?* Es anterior al cierre de
+  CSRF; la evidencia 08 comprueba ese cierre y el informe lo advierte.
+- *¿Los datos son reales?* No: clientes, RFC, montos y usuarios son ficticios. La
+  contraseña se genera por entorno y no se versiona.
+- *¿Se aplicó esto en producción?* No. Lo probado es laboratorio; lo demás está
+  etiquetado como propuesta en las diapositivas 5, 14 y 16.
+- *¿Se midió un ahorro o una reducción de tiempo?* No; por eso la diapositiva 15 solo
+  afirma beneficios cualitativos.
+
+* 7. Checklist final antes de exponer
+
+- [ ] =INFORME.pdf= tiene 19 páginas y ambos autores en los metadatos.
+- [ ] Los 6 números clave coinciden con las evidencias (6→0, 200→403, 3→0 altas).
+- [ ] Las 3 demostraciones funcionan dos veces seguidas, con :5000 y :5001 arriba.
+- [ ] Capturas de respaldo abiertas en una pestaña por si falla el vivo.
+- [ ] Cero credenciales visibles en diapositivas, capturas o código expuesto.
+- [ ] Cada diapositiva tiene una sola idea; ninguna supera las 30 palabras visibles.
+- [ ] Jahil y Hugo han ensayado sus partes con el cronómetro (13:00 ± 30 s).
+- [ ] Las acciones no implementadas llevan la etiqueta =RECOMENDACIÓN= o =PROPUESTA=.

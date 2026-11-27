@@ -125,6 +125,8 @@ LAB_PASSWORD="$LAB_PASSWORD" scripts/capturar_figuras.sh
   plantilla =~/Documents/Clases/sample.tex=.
 - =GUIA_PRESENTACION.org= resume las instrucciones, qué se hizo en cada actividad y un
   guion para exponer el trabajo sin conocerlo de antemano.
+- =PRESENTACION_GUION.org= es el guion de 17 diapositivas: orden de maquetación, texto
+  literal por diapositiva, hablante, demostración en vivo y mapa de evidencias.
 
 * Seguridad de la entrega
 

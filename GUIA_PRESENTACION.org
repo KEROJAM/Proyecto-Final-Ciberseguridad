@@ -84,6 +84,12 @@ defines, la app genera una efímera y la imprime en la terminal.
 
 * 4. Guion sugerido (8 minutos)
 
+Para la presentación formal de 17 diapositivas con la rúbrica de la tarea, usar
+[[file:PRESENTACION_GUION.org][PRESENTACION_GUION.org]]: incluye el orden de
+maquetación, el hablante y el texto literal de cada diapositiva, la secuencia de
+demostración en vivo y el mapa de evidencias. El resumen de 8 minutos de esta sección
+sirve como repaso rápido.
+
 ** Minuto 1 · Contexto y problema
 
 "El despacho ficticio Ramírez & Asociados ya tenía controles de red, MFA en SSH,
